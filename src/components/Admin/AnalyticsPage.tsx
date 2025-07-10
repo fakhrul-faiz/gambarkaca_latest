@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
   TrendingUp, Users, DollarSign, Megaphone, Star, Calendar,
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import ExcelJS from 'exceljs';
+import html2canvas from 'html2canvas';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import html2canvas from 'html2canvas';
 
 // Utility for grouping by month
 function groupByMonth(items, dateField, valueField?) {
@@ -41,12 +41,19 @@ const AnalyticsPage: React.FC = () => {
     return true;
   });
 
-  // Export Excel
+  // Export Excel with chart image
   const handleExportExcel = async () => {
     setLoading(true);
+
+    // 1. Render the chart as an image (use chartRef)
+    let chartImageBase64: string | null = null;
+    if (chartRef.current) {
+      const canvas = await html2canvas(chartRef.current, { backgroundColor: "#fff" });
+      chartImageBase64 = canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, "");
+    }
+
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Campaign Payment Report');
-
     worksheet.columns = [
       { header: 'Campaign Title', key: 'campaign', width: 30 },
       { header: 'Campaign Owner', key: 'founder', width: 24 },
@@ -76,11 +83,24 @@ const AnalyticsPage: React.FC = () => {
     });
 
     worksheet.getRow(1).font = { bold: true };
+
+    // 2. Insert the chart image, if captured
+    if (chartImageBase64) {
+      const imageId = workbook.addImage({
+        base64: chartImageBase64,
+        extension: 'png',
+      });
+      worksheet.addImage(imageId, {
+        tl: { col: 0, row: filteredOrders.length + 3 },
+        ext: { width: 800, height: 320 }, // Adjust as needed
+      });
+    }
+
     const buf = await workbook.xlsx.writeBuffer();
     saveAs(
-    new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
-    `Campaign_Payment_Report_${Date.now()}.xlsx`
-  );
+      new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      `Campaign_Payment_Report_${Date.now()}.xlsx`
+    );
     setLoading(false);
   };
 
@@ -184,10 +204,10 @@ const AnalyticsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Charts */}
+      {/* Bar Chart with ref for export */}
       <div className="bg-white rounded-2xl shadow-sm border p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Revenue & Campaign Activity</h3>
-        <div className="w-full h-96">
+        <div className="w-full h-96" ref={chartRef}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
