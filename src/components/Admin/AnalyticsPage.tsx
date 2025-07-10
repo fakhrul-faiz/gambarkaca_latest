@@ -26,6 +26,7 @@ const AnalyticsPage: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   // Filter orders by date
   const filteredOrders = orders.filter(order => {
