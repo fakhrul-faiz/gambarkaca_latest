@@ -1038,3 +1038,14 @@ export async function deleteReviewMedia(orderId: string, mediaUrl: string): Prom
     throw new Error('Failed to delete review media: ' + (err.message || err));
   }
 };
+
+// Fetch withdrawals for a user
+export const getWithdrawals = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('withdrawals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('requested_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+};
