@@ -105,7 +105,7 @@ const AnalyticsPage: React.FC = () => {
 
     // --- Sheet 3: Campaigns Report ---
     const campaignsWorksheet = workbook.addWorksheet('Campaigns Report');
-    campaignsWork.Worksheet.columns = [
+    campaignsWorksheet.columns = [
       { header: 'ID', key: 'id', width: 30 },
       { header: 'Founder ID', key: 'founderId', width: 30 },
       { header: 'Title', key: 'title', width: 30 },
