@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, User } from 'lucide-react';
+import { X, Send, User, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { createDirectMessage, getAdminUsers, markAllDirectMessagesAsRead } from '../../lib/api';
