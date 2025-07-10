@@ -53,20 +53,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (userData: any): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true);
-      
-      // For talents, ensure skills and portfolio are properly formatted
-      if (userData.role === 'talent') {
-        userData.skills = userData.skills || [];
-        userData.portfolio = userData.portfolio || [];
-      }
-      
       await signUp(userData.email, userData.password, {
         name: userData.name,
         role: userData.role,
         company: userData.company,
         bio: userData.bio,
-        skills: userData.skills,
-        portfolio: userData.portfolio,
       });
       
       // For talents, they need admin approval, so don't auto-login

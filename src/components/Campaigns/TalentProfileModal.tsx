@@ -38,13 +38,8 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({
   };
 
   const isVideoUrl = (url: string) => {
-    if (typeof url === 'object' && url.type === 'video') {
-      return true;
-    }
-    return typeof url === 'string' && (
-      url.includes('.mp4') || url.includes('.mov') || url.includes('.webm') || 
-      url.includes('video') || url.endsWith('.mp4')
-    );
+    return url.includes('.mp4') || url.includes('.mov') || url.includes('.webm') || 
+           url.includes('video') || url.endsWith('.mp4');
   };
 
   return (
@@ -186,16 +181,16 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({
           )}
 
           {/* Portfolio Section */}
-          {talent.portfolio && Array.isArray(talent.portfolio) && talent.portfolio.length > 0 && (
+          {talent.portfolio && talent.portfolio.length > 0 && (
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-3">Portfolio</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {talent.portfolio.map((item, index) => (
                   <div key={index} className="relative group">
-                    {(typeof item === 'object' ? item.type === 'video' : isVideoUrl(item)) ? (
+                    {isVideoUrl(item) ? (
                       <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
                         <video
-                          src={typeof item === 'object' ? item.url : item}
+                          src={item}
                           className="w-full h-full object-cover"
                           controls
                         />
@@ -206,7 +201,7 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({
                     ) : (
                       <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                         <img
-                          src={typeof item === 'object' ? item.url : item}
+                          src={item}
                           alt={`Portfolio ${index + 1}`}
                           className="w-full h-full object-cover"
                         />

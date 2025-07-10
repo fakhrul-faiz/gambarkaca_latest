@@ -32,16 +32,10 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({ onClose }) => {
   const [portfolioFiles, setPortfolioFiles] = useState<File[]>([]);
   const [portfolioUploading, setPortfolioUploading] = useState(false);
   const [portfolioItems, setPortfolioItems] = useState<{url: string, type: 'image' | 'video'}[]>(
-    Array.isArray(talent.portfolio) 
-      ? talent.portfolio.map(item => 
-          typeof item === 'object' && item.url && item.type
-            ? { url: item.url, type: item.type }
-            : { 
-                url: typeof item === 'string' ? item : '', 
-                type: (typeof item === 'string' && (item.includes('.mp4') || item.includes('video'))) ? 'video' : 'image' 
-              }
-        )
-      : []
+    talent.portfolio?.map(url => ({
+      url,
+      type: url.includes('.mp4') || url.includes('video') ? 'video' : 'image'
+    })) || []
   );
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -197,7 +191,7 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({ onClose }) => {
         ...talent,
         ...formData,
         avatar: avatarPreview,
-        portfolio: portfolioItems,
+        portfolio: portfolioItems.map(item => item.url),
       };
       
       await updateProfile?.(updatedTalent);

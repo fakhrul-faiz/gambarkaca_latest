@@ -42,7 +42,7 @@ const convertProfileToUser = (profile: ProfileRow): User | Founder | Talent => {
       ...baseUser,
       role: 'talent',
       bio: profile.bio || undefined,
-      portfolio: (profile.portfolio as Array<{ url: string; type: 'image' | 'video' }>) || [],
+      portfolio: (profile.portfolio as string[]) || [],
       rateLevel: (profile.rate_level as 1 | 2 | 3) || 1,
       skills: (profile.skills as string[]) || [],
       socialMedia: (profile.social_media as any) || {},
@@ -310,7 +310,14 @@ export const signUp = async (email: string, password: string, userData: any) => 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { email } },
+      options: {
+        data: {
+          name: userData.name,
+          role: userData.role,
+          company: userData.company,
+          bio: userData.bio,
+        },
+      },
     });
 
     if (error) {
@@ -326,26 +333,6 @@ export const signUp = async (email: string, password: string, userData: any) => 
         throw new Error('Password must be at least 6 characters long.');
       }
       throw new Error(error.message || 'Registration failed. Please try again.');
-    }
-
-    // Create profile with additional data
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: data.user?.id,
-        email: userData.email,
-        name: userData.name,
-        role: userData.role,
-        company: userData.company,
-        bio: userData.bio,
-        skills: userData.skills || [],
-        portfolio: userData.portfolio || [],
-        status: userData.role === 'talent' ? 'pending' : 'active',
-      });
-
-    if (profileError) {
-      console.error('Profile creation error:', profileError);
-      throw new Error('Failed to create user profile. Please try again.');
     }
 
     return data;
