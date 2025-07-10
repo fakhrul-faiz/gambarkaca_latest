@@ -115,12 +115,18 @@ const EarningsPage: React.FC = () => {
             <p className="text-3xl sm:text-4xl font-bold">{formatCurrency(totalEarnings)}</p>
           </div>
            <button
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow font-medium"
-            onClick={() => setShowWithdraw(true)}
-            disabled={totalEarnings < 1}
-          >
-            Withdraw
-          </button>
+              className="mt-3 px-6 py-2 rounded-full shadow-md font-semibold text-white bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 transition-all duration-200 border-0 outline-none focus:ring-2 focus:ring-blue-300"
+              onClick={() => setShowWithdraw(true)}
+              disabled={totalEarnings < 1}
+              style={{
+                boxShadow: '0 4px 18px 0 rgba(32, 89, 246, 0.14)',
+                minWidth: 120,
+                fontSize: '1rem',
+                letterSpacing: '0.04em'
+              }}
+            >
+              Withdraw
+            </button>
           <div className="p-4 bg-white bg-opacity-20 rounded-full self-start sm:self-auto">
             <DollarSign className="h-8 w-8" />
           </div>
