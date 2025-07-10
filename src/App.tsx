@@ -23,6 +23,8 @@ import AnalyticsPage from './components/Admin/AnalyticsPage';
 import FounderProfileModal from './components/Profile/FounderProfileModal';
 import TalentProfileModal from './components/Profile/TalentProfileModal';
 import AdminProfileModal from './components/Profile/AdminProfileModal';
+import MessagesPage from './components/Admin/MessagesPage';
+import MessageFab from './components/Common/MessageFab';
 import WithdrawalsPage from './components/Wallet/WithdrawalsPage';
 
 const AppContent: React.FC = () => {
@@ -86,6 +88,11 @@ const AppContent: React.FC = () => {
         return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
       case 'analytics':
         if (user.role === 'admin') return <AnalyticsPage />;
+        // Redirect non-admins to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
+      case 'messages':
+        if (user.role === 'admin') return <MessagesPage />;
         // Redirect non-admins to dashboard
         setCurrentPage('dashboard');
         return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
@@ -154,6 +161,9 @@ const AppContent: React.FC = () => {
           {renderCurrentPage()}
         </main>
       </div>
+      
+      {/* Message FAB for talents */}
+      {user.role === 'talent' && <MessageFab />}
 
       {/* Profile Modals */}
       {showProfileModal && user.role === 'founder' && (

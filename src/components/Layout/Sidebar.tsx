@@ -2,7 +2,8 @@ import React from 'react';
 import { 
   Home, 
   Users, 
-  Star, 
+  Star,
+  MessageCircle,
   Megaphone, 
   Wallet, 
   FileText, 
@@ -33,6 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, className 
           { id: 'talents', label: 'Talents', icon: Star },
           { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
           { id: 'payments', label: 'Payments', icon: CreditCard },
+          { id: 'messages', label: 'Messages', icon: MessageCircle },
           { id: 'analytics', label: 'Analytics', icon: BarChart3 },
         ];
       case 'founder':
