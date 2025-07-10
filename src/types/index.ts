@@ -137,6 +137,17 @@ export interface Notification {
   createdAt: Date;
 }
 
+export interface DirectMessage {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  senderName?: string;
+  receiverName?: string;
+  content: string;
+  isRead: boolean;
+  createdAt: Date;
+}
+
 // Updated pricing configuration with your exact prices
 export const PRICING_CONFIG = {
   rateLevel: {
