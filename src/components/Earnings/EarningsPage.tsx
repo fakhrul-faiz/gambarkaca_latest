@@ -300,12 +300,7 @@ const EarningsPage: React.FC = () => {
     </div>
   </div>
 )}
-  <WithdrawModal
-    open={showWithdraw}
-    onClose={() => setShowWithdraw(false)}
-    currentTotal={totalEarnings}
-    userId={talent.id}
-  />
+
       </div>
       
     </div>
