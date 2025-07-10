@@ -144,10 +144,10 @@ const DirectMessageDialog: React.FC<DirectMessageDialogProps> = ({ isOpen, onClo
 
   return (
     <div
-      className={`fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}
-    >
+  className={`fixed top-8 bottom-8 right-0 z-50 w-full sm:w-96 bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out ${
+    isOpen ? 'translate-x-0' : 'translate-x-full'
+  }`}
+>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="flex items-center space-x-3">
