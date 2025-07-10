@@ -3,7 +3,7 @@ import { DollarSign, Search, Filter, Calendar, TrendingUp, Award, Package, Check
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Talent } from '../../types';
-import {WithdrawModal} from '../Wallet/WithdrawModal';
+import WithdrawModal from '../Wallet/WithdrawModal';
 
 const EarningsPage: React.FC = () => {
   const { user } = useAuth();
@@ -151,12 +151,6 @@ const EarningsPage: React.FC = () => {
             </div>
           </div>
         </div>
-          <WithdrawModal
-    open={showWithdraw}
-    onClose={() => setShowWithdraw(false)}
-    currentTotal={totalEarnings}
-    userId={talent.id}
-  />
       </div>
 
       {/* Quick Stats */}
