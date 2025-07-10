@@ -103,7 +103,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-3 md:p-4 bg-gray-50">
         {messages.length === 0 ? (
           <div className="text-center py-6 md:py-8">
             <MessageCircle className="h-10 w-10 md:h-12 md:w-12 mx-auto text-gray-300 mb-2 md:mb-3" />
@@ -114,35 +114,36 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         ) : (
           <>
-            {messages.map((message, index) => {
-              const isCurrentUser = message.senderId === user?.id;
-              const showDate = index === 0 ||
-                formatDate(new Date(message.timestamp)) !== formatDate(new Date(messages[index - 1].timestamp));
+            <div className="space-y-3 md:space-y-4">
+              {messages.map((message, index) => {
+                const isCurrentUser = message.senderId === user?.id;
+                const showDate = index === 0 ||
+                  formatDate(new Date(message.timestamp)) !== formatDate(new Date(messages[index - 1].timestamp));
 
-              return (
-                <div key={message.id}>
-                  {showDate && (
-                    <div className="text-center py-2">
-                      <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">
-                        {formatDate(new Date(message.timestamp))}
-                      </span>
-                    </div>
-                  )}
-                  <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      isCurrentUser
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-gray-900 border border-gray-200'
-                    }`}>
-                      <p className="text-sm">{message.content}</p>
-                    <p className="text-xs md:text-sm">{message.content}</p>
-                    <p className={`text-xs mt-1 text-opacity-75 ${isCurrentUser ? 'text-blue-100' : 'text-gray-500'}`}>
-                      </p>
+                return (
+                  <div key={message.id} className="mb-3">
+                    {showDate && (
+                      <div className="text-center py-2">
+                        <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">
+                          {formatDate(new Date(message.timestamp))}
+                        </span>
+                      </div>
+                    )}
+                    <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        isCurrentUser
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-900 border border-gray-200'
+                      }`}>
+                        <p className="text-sm">{message.content}</p>
+                        <p className={`text-xs mt-1 text-opacity-75 ${isCurrentUser ? 'text-blue-100' : 'text-gray-500'}`}>
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
             <div ref={messagesEndRef} />
           </>
         )}
