@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
-  TrendingUp, Users, DollarSign, Megaphone, Star,
+  TrendingUp, Users, DollarSign, Megaphone, Star, Calendar,
 } from 'lucide-react';
+import { saveAs } from 'file-saver';
+import ExcelJS from 'exceljs';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 
 // Utility for grouping by month
-function groupByMonth(items, dateField, valueField) {
+function groupByMonth(items, dateField, valueField?) {
   const result: Record<string, number> = {};
   items.forEach(item => {
     const date = new Date(item[dateField]);
@@ -20,8 +22,64 @@ function groupByMonth(items, dateField, valueField) {
 
 const AnalyticsPage: React.FC = () => {
   const { orders, transactions, campaigns, talents, founders } = useApp();
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Analytics data
+  // Filter orders by date
+  const filteredOrders = orders.filter(order => {
+    const created = new Date(order.createdAt);
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    if (start && created < start) return false;
+    if (end) {
+      end.setHours(23, 59, 59, 999);
+      if (created > end) return false;
+    }
+    return true;
+  });
+
+  // Export Excel
+  const handleExportExcel = async () => {
+    setLoading(true);
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Campaign Payment Report');
+
+    worksheet.columns = [
+      { header: 'Campaign Title', key: 'campaign', width: 30 },
+      { header: 'Campaign Owner', key: 'founder', width: 24 },
+      { header: 'Order ID', key: 'order', width: 24 },
+      { header: 'Talent', key: 'talent', width: 24 },
+      { header: 'Status', key: 'status', width: 16 },
+      { header: 'Payout Amount (RM)', key: 'payout', width: 18 },
+      { header: 'Admin Fee (RM)', key: 'adminFee', width: 14 },
+      { header: 'Total Deduction (RM)', key: 'totalDeduct', width: 18 },
+      { header: 'Order Date', key: 'createdAt', width: 20 },
+    ];
+
+    filteredOrders.forEach(order => {
+      const campaign = campaigns.find(c => c.id === order.campaignId);
+      const adminFee = order.payout * 0.1;
+      worksheet.addRow({
+        campaign: campaign ? campaign.title : '',
+        founder: campaign?.founderName || '', // Modify as needed to show founder's name
+        order: order.id,
+        talent: order.talentName,
+        status: order.status,
+        payout: Number(order.payout || 0).toFixed(2),
+        adminFee: Number(adminFee).toFixed(2),
+        totalDeduct: Number(order.payout + adminFee).toFixed(2),
+        createdAt: new Date(order.createdAt).toLocaleString(),
+      });
+    });
+
+    worksheet.getRow(1).font = { bold: true };
+    const buf = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buf]), `Campaign_Payment_Report_${Date.now()}.xlsx`);
+    setLoading(false);
+  };
+
+  // Analytics data (charts)
   const revenueByMonth = groupByMonth(
     transactions.filter(t => t.type === 'credit' && t.description?.toLowerCase().includes('admin fee')),
     'createdAt',
@@ -34,7 +92,6 @@ const AnalyticsPage: React.FC = () => {
   );
   const campaignsByMonth = groupByMonth(campaigns, 'createdAt');
 
-  // Merge all months for chart
   const monthsSet = new Set([
     ...Object.keys(revenueByMonth),
     ...Object.keys(talentPayoutByMonth),
@@ -42,7 +99,6 @@ const AnalyticsPage: React.FC = () => {
   ]);
   const months = Array.from(monthsSet).sort();
 
-  // Data for chart
   const chartData = months.map(month => ({
     month,
     Revenue: revenueByMonth[month] || 0,
@@ -62,6 +118,32 @@ const AnalyticsPage: React.FC = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Platform Analytics</h1>
         <p className="text-gray-600">See platform growth, revenue, and activity over time</p>
+      </div>
+
+      {/* Export & Date Filter */}
+      <div className="flex flex-wrap gap-2 items-center mb-2">
+        <label className="text-sm font-medium">Start Date:</label>
+        <input
+          type="date"
+          value={startDate}
+          onChange={e => setStartDate(e.target.value)}
+          className="border rounded px-2 py-1"
+        />
+        <label className="text-sm font-medium">End Date:</label>
+        <input
+          type="date"
+          value={endDate}
+          onChange={e => setEndDate(e.target.value)}
+          className="border rounded px-2 py-1"
+        />
+        <button
+          onClick={handleExportExcel}
+          disabled={loading || filteredOrders.length === 0}
+          className="ml-4 bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 text-white px-5 py-2 rounded-full shadow font-semibold hover:from-green-600 hover:to-purple-600 transition-all duration-200 flex items-center gap-2"
+        >
+          <Calendar className="h-5 w-5" />
+          {loading ? 'Exporting...' : 'Export Excel'}
+        </button>
       </div>
 
       {/* Quick Stats */}
@@ -116,7 +198,7 @@ const AnalyticsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Optional: Add line chart for more granularity */}
+      {/* Line chart */}
       <div className="bg-white rounded-2xl shadow-sm border p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Revenue vs Talent Payouts</h3>
         <div className="w-full h-80">
