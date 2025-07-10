@@ -343,8 +343,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                   </p>
                 </div>
 
-                {/* Portfolio Preview */}
-                {formData.portfolio.length > 0 && (
+                   {formData.portfolio.length > 0 && (
                   <div className="mt-4">
                     <h5 className="text-sm font-medium text-gray-700 mb-3">Portfolio Preview</h5>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
