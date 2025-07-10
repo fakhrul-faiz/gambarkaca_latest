@@ -16,6 +16,16 @@ const TalentApprovalModal: React.FC<TalentApprovalModalProps> = ({
   const [selectedRateLevel, setSelectedRateLevel] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
 
+  const isVideoUrl = (url: string) => {
+    if (typeof url === 'object' && url.type === 'video') {
+      return true;
+    }
+    return typeof url === 'string' && (
+      url.includes('.mp4') || url.includes('.mov') || url.includes('.webm') || 
+      url.includes('video') || url.endsWith('.mp4')
+    );
+  };
+
   const getRateLevelColor = (level: number) => {
     switch (level) {
       case 1:
@@ -133,17 +143,32 @@ const TalentApprovalModal: React.FC<TalentApprovalModalProps> = ({
           )}
 
           {/* Portfolio Section */}
-          {talent.portfolio && talent.portfolio.length > 0 && (
+          {talent.portfolio && Array.isArray(talent.portfolio) && talent.portfolio.length > 0 && (
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-3">Portfolio</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {talent.portfolio.map((item, index) => (
                   <div key={index} className="relative group">
-                    <img
-                      src={item}
-                      alt={`Portfolio ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                    />
+                    {(typeof item === 'object' ? item.type === 'video' : isVideoUrl(item)) ? (
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
+                        <video
+                          src={typeof item === 'object' ? item.url : item}
+                          className="w-full h-full object-cover"
+                          controls
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="h-6 w-6 text-white" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <img
+                        src={typeof item === 'object' ? item.url : item}
+                        alt={`Portfolio ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                         <Camera className="h-6 w-6 text-white" />
