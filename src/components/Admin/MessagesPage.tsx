@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, User, MessageCircle, Calendar, CheckCircle, X, Send } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
-import { DirectMessage, User as UserType } from '../../types';
+import { User as UserType } from '../../types';
 import { getDirectMessages, createDirectMessage, markAllDirectMessagesAsRead } from '../../lib/api';
 
 const MessagesPage: React.FC = () => {
@@ -13,20 +13,14 @@ const MessagesPage: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [activeConversations, setActiveConversations] = useState<{
-    user: UserType;
-    lastMessage: string;
-    timestamp: Date;
-    unreadCount: number;
-  }[]>([]);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   // Combine talents and founders for user selection
-  const allUsers = [...talents, ...founders];
+  const allUsers = React.useMemo(() => [...talents, ...founders], [talents, founders]);
 
-  // Filter and group messages by conversation
-  useEffect(() => {
-    if (!user || !directMessages.length) return;
+  // Memoize active conversations instead of using state + useEffect
+  const activeConversations = React.useMemo(() => {
+    if (!user || !directMessages.length) return [];
 
     const conversations = new Map<string, {
       user: UserType;
@@ -73,7 +67,7 @@ const MessagesPage: React.FC = () => {
     const sortedConversations = Array.from(conversations.values())
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-    setActiveConversations(sortedConversations.map(conv => ({
+    return sortedConversations.map(conv => ({
       user: conv.user,
       lastMessage: conv.lastMessage,
       timestamp: conv.timestamp,
