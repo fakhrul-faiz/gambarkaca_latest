@@ -111,6 +111,8 @@ const AppContent: React.FC = () => {
         return user.role === 'admin' ? <AdminDashboard /> : <TalentDashboard />;
       case 'jobs':
         if (user.role === 'talent') return <MyJobsPage />;
+      case 'withdrawals':
+        if (user.role === 'talent') return <WithdrawalsPage />;
         // Redirect non-talents to dashboard
         setCurrentPage('dashboard');
         return user.role === 'admin' ? <AdminDashboard /> : <FounderDashboard />;
