@@ -72,7 +72,7 @@ const MessagesPage: React.FC = () => {
       lastMessage: conv.lastMessage,
       timestamp: conv.timestamp,
       unreadCount: conv.unreadCount
-    })));
+    }));
   }, [user, directMessages, allUsers]);
 
   // Filter conversations based on search and status
