@@ -7,7 +7,6 @@ import {
   Megaphone, 
   Wallet, 
   FileText, 
-  MessageCircle,
   Package,
   BarChart3,
   Settings,
