@@ -126,6 +126,21 @@ const ReviewsPage: React.FC = () => {
       description: `Admin Fee (10%) - ${order.campaignTitle}`,
       relatedJobId: orderId
     });
+
+        // 1. Fetch talent's latest profile
+    const { data: talentProfile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', order.talentId)
+      .single();
+    if (error || !talentProfile) throw error || new Error('Talent profile not found');
+
+    // 2. Calculate new total earnings
+    const newTotalEarnings = (Number(talentProfile.total_earning) || 0) + talentPayment;
+
+    // 3. Update talent's profile with new total earnings
+    await updateProfile(order.talentId, { total_earning: newTotalEarnings });
+    
     const founder = user as Founder;
     if (founder && updateProfile) {
       const updatedFounder: Founder = {
