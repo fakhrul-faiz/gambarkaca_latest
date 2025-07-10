@@ -27,7 +27,6 @@ const AnalyticsPage: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
-  const canExport = !!startDate && !!endDate && filteredOrders.length > 0 && !loading;
   // Filter orders by date
   const filteredOrders = orders.filter(order => {
     const created = new Date(order.createdAt);
@@ -84,6 +83,9 @@ const AnalyticsPage: React.FC = () => {
     });
 
     worksheet.getRow(1).font = { bold: true };
+
+  const canExport = !!startDate && !!endDate && filteredOrders.length > 0 && !loading;
+    
 
     // 2. Insert the chart image, if captured
     if (chartImageBase64) {
