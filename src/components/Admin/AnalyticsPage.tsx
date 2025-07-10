@@ -84,9 +84,6 @@ const AnalyticsPage: React.FC = () => {
 
     worksheet.getRow(1).font = { bold: true };
 
-  const canExport = !!startDate && !!endDate && filteredOrders.length > 0 && !loading;
-    
-
     // 2. Insert the chart image, if captured
     if (chartImageBase64) {
       const imageId = workbook.addImage({
@@ -140,6 +137,8 @@ const AnalyticsPage: React.FC = () => {
   const totalCampaigns = campaigns.length;
   const totalTalents = talents.length;
   const totalFounders = founders.length;
+
+  const canExport = !!startDate && !!endDate && filteredOrders.length > 0 && !loading;
 
   return (
     <div className="space-y-8">
