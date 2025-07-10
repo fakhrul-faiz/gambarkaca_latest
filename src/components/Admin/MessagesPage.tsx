@@ -350,42 +350,44 @@ const MessagesPage: React.FC = () => {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+              <div className="flex-1 overflow-y-auto p-4 bg-gray-50" style={{ overflowY: 'auto' }}>
                 {Object.keys(groupedMessages).length > 0 ? (
-                  Object.entries(groupedMessages).map(([date, messages]) => (
-                    <div key={date}>
-                      <div className="text-center my-3">
-                        <span className="px-3 py-1 bg-gray-200 rounded-full text-xs text-gray-600">
-                          {date}
-                        </span>
-                      </div>
-                      <div className="space-y-3">
-                        {messages.map(msg => (
-                          <div
-                            key={msg.id}
-                            className={`flex ${msg.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
-                          >
+                  <div>
+                    {Object.entries(groupedMessages).map(([date, messages]) => (
+                      <div key={date} className="mb-4">
+                        <div className="text-center my-3">
+                          <span className="px-3 py-1 bg-gray-200 rounded-full text-xs text-gray-600">
+                            {date}
+                          </span>
+                        </div>
+                        <div>
+                          {messages.map(msg => (
                             <div
-                              className={`max-w-[80%] px-4 py-2 rounded-lg ${
-                                msg.senderId === user?.id
-                                  ? 'bg-blue-600 text-white rounded-br-none'
-                                  : 'bg-white border border-gray-200 rounded-bl-none'
-                              }`}
+                              key={msg.id}
+                              className={`flex ${msg.senderId === user?.id ? 'justify-end' : 'justify-start'} mb-3`}
                             >
-                              <p className="text-sm">{msg.content}</p>
-                              <p
-                                className={`text-xs mt-1 text-right ${
-                                  msg.senderId === user?.id ? 'text-blue-100' : 'text-gray-500'
+                              <div
+                                className={`max-w-[80%] px-4 py-2 rounded-lg ${
+                                  msg.senderId === user?.id
+                                    ? 'bg-blue-600 text-white rounded-br-none'
+                                    : 'bg-white border border-gray-200 rounded-bl-none'
                                 }`}
                               >
-                                {formatTime(msg.createdAt)}
-                              </p>
+                                <p className="text-sm">{msg.content}</p>
+                                <p
+                                  className={`text-xs mt-1 text-right ${
+                                    msg.senderId === user?.id ? 'text-blue-100' : 'text-gray-500'
+                                  }`}
+                                >
+                                  {formatTime(msg.createdAt)}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-3">
