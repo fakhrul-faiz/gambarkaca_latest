@@ -3,6 +3,7 @@ import { DollarSign, Search, Filter, Calendar, TrendingUp, Award, Package, Check
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Talent } from '../../types';
+import {WithdrawModal} from '../Wallet/WithdrawModal';
 
 const EarningsPage: React.FC = () => {
   const { user } = useAuth();
