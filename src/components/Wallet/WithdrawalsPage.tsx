@@ -32,12 +32,28 @@ const WithdrawalsPage: React.FC = () => {
   const { user } = useAuth();
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     if (user?.id) {
       getWithdrawals(user.id).then(setWithdrawals).finally(() => setLoading(false));
     }
   }, [user]);
+
+  // Filter by date range
+  const filteredWithdrawals = withdrawals.filter(w => {
+    const date = new Date(w.requested_at);
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    if (start && date < start) return false;
+    if (end) {
+      // include the whole end day
+      end.setHours(23, 59, 59, 999);
+      if (date > end) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6 pb-8">
@@ -46,10 +62,36 @@ const WithdrawalsPage: React.FC = () => {
         <p className="text-gray-600 text-sm">Track your withdrawal requests</p>
       </div>
 
+      {/* Date filter controls */}
+      <div className="flex flex-wrap gap-3 mb-2 items-center">
+        <label className="text-sm font-medium">Start Date:</label>
+        <input
+          type="date"
+          value={startDate}
+          onChange={e => setStartDate(e.target.value)}
+          className="border rounded px-2 py-1"
+        />
+        <label className="text-sm font-medium">End Date:</label>
+        <input
+          type="date"
+          value={endDate}
+          onChange={e => setEndDate(e.target.value)}
+          className="border rounded px-2 py-1"
+        />
+        {(startDate || endDate) && (
+          <button
+            className="ml-2 text-xs px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+            onClick={() => { setStartDate(''); setEndDate(''); }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         {loading ? (
           <div>Loading...</div>
-        ) : withdrawals.length === 0 ? (
+        ) : filteredWithdrawals.length === 0 ? (
           <div className="text-gray-500 py-6 text-center">
             No withdrawal records found.
           </div>
@@ -68,7 +110,7 @@ const WithdrawalsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {withdrawals.map(w => (
+                {filteredWithdrawals.map(w => (
                   <tr key={w.id} className="border-t">
                     <td className="px-4 py-2">{new Date(w.requested_at).toLocaleString()}</td>
                     <td className="px-4 py-2 text-green-700 font-bold">RM{Number(w.amount).toFixed(2)}</td>
