@@ -114,17 +114,17 @@ const EarningsPage: React.FC = () => {
             <h2 className="text-base sm:text-lg font-medium text-green-100">Total Earnings</h2>
             <p className="text-3xl sm:text-4xl font-bold">{formatCurrency(totalEarnings)}</p>
           </div>
-          <div className="p-4 bg-white bg-opacity-20 rounded-full self-start sm:self-auto">
-            <DollarSign className="h-8 w-8" />
-          </div>
-        </div>
-          <button
+           <button
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow font-medium"
             onClick={() => setShowWithdraw(true)}
             disabled={totalEarnings < 1}
           >
             Withdraw
           </button>
+          <div className="p-4 bg-white bg-opacity-20 rounded-full self-start sm:self-auto">
+            <DollarSign className="h-8 w-8" />
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-white bg-opacity-10 rounded-lg p-4 flex items-center space-x-3">
