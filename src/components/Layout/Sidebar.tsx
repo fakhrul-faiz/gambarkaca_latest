@@ -10,7 +10,8 @@ import {
   Package,
   BarChart3,
   Settings,
-  CreditCard
+  CreditCard,
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
