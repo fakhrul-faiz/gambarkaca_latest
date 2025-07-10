@@ -18,6 +18,7 @@ const DirectMessageDialog: React.FC<DirectMessageDialogProps> = ({ isOpen, onClo
   const [selectedAdmin, setSelectedAdmin] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLength = useRef(0);
 
   // Fetch admin users only when opened or user changes
   useEffect(() => {
@@ -41,8 +42,6 @@ const DirectMessageDialog: React.FC<DirectMessageDialogProps> = ({ isOpen, onClo
       fetchAdmins();
     }
     return () => { mounted = false; };
-    // only rerun if opened or user changed, not selectedAdmin!
-    // eslint-disable-next-line
   }, [isOpen, user]);
 
   // Filter messages for the current conversation
@@ -52,10 +51,16 @@ const DirectMessageDialog: React.FC<DirectMessageDialogProps> = ({ isOpen, onClo
       (msg.senderId === selectedAdmin?.id && msg.receiverId === user?.id)
   );
 
-  // Scroll to bottom when messages change or dialog opens
+  // Scroll to bottom only when a new message is added or dialog opens
   useEffect(() => {
-    if (isOpen && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (isOpen) {
+      if (
+        conversationMessages.length > prevMessagesLength.current ||
+        prevMessagesLength.current === 0
+      ) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+      prevMessagesLength.current = conversationMessages.length;
     }
   }, [conversationMessages, isOpen]);
 
