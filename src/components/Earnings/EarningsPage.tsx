@@ -11,7 +11,8 @@ const EarningsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
-
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  
   const talent = user as Talent;
 
   // Filter earnings for the current talent
@@ -117,6 +118,13 @@ const EarningsPage: React.FC = () => {
             <DollarSign className="h-8 w-8" />
           </div>
         </div>
+          <button
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow font-medium"
+            onClick={() => setShowWithdraw(true)}
+            disabled={totalEarnings < 1}
+          >
+            Withdraw
+          </button>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-white bg-opacity-10 rounded-lg p-4 flex items-center space-x-3">
