@@ -27,6 +27,7 @@ const AnalyticsPage: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
+
   // Filter orders by date
   const filteredOrders = orders.filter(order => {
     const created = new Date(order.createdAt);
@@ -138,8 +139,6 @@ const AnalyticsPage: React.FC = () => {
   const totalTalents = talents.length;
   const totalFounders = founders.length;
 
-  const canExport = !!startDate && !!endDate && filteredOrders.length > 0 && !loading;
-
   return (
     <div className="space-y-8">
       <div>
@@ -163,14 +162,13 @@ const AnalyticsPage: React.FC = () => {
           onChange={e => setEndDate(e.target.value)}
           className="border rounded px-2 py-1"
         />
-        <button
-            onClick={canExport ? handleExportExcel : undefined}
-            disabled={!canExport}
-            className={`... ${!canExport ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-          <Calendar className="h-5 w-5" />
-          {loading ? 'Exporting...' : 'Export Excel'}
-        </button>
+<button
+  onClick={handleExportExcel}
+  className="ml-4 bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 text-white px-5 py-2 rounded-full shadow font-semibold hover:from-green-600 hover:to-purple-600 transition-all duration-200 flex items-center gap-2"
+>
+  <Calendar className="h-5 w-5" />
+  {loading ? 'Exporting...' : 'Export Excel'}
+</button>
       </div>
 
       {/* Quick Stats */}
