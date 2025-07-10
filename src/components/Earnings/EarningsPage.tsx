@@ -84,7 +84,7 @@ const EarningsPage: React.FC = () => {
   };
 
   // Calculate statistics
-  const totalEarnings = talentEarnings.reduce((sum, earning) => sum + earning.amount, 0);
+  const totalEarnings = talent.totalEarnings;
   const paidEarnings = talentEarnings.filter(e => e.status === 'paid').reduce((sum, earning) => sum + earning.amount, 0);
   const pendingEarnings = talentEarnings.filter(e => e.status === 'pending').reduce((sum, earning) => sum + earning.amount, 0);
 

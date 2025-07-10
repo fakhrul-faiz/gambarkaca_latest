@@ -39,9 +39,7 @@ const Navbar: React.FC = () => {
   const talentUser = user as Talent;
 
   // Calculate talent's total earnings
-  const talentTotalEarnings = isTalent 
-    ? earnings.filter(e => e.talentId === user.id && e.status === 'paid').reduce((sum, e) => sum + e.amount, 0)
-    : 0;
+  const talentTotalEarnings = isTalent ? talentUser.totalEarnings : 0;
     
   // Count unread notifications
   const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
