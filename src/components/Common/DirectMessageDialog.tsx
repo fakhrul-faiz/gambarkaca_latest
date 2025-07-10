@@ -19,30 +19,35 @@ const DirectMessageDialog: React.FC<DirectMessageDialogProps> = ({ isOpen, onClo
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch admin users
+  // Fetch admin users only when opened or user changes
   useEffect(() => {
+    let mounted = true;
     const fetchAdmins = async () => {
       try {
         const admins = await getAdminUsers();
+        if (!mounted) return;
         setAdminUsers(admins);
-        
+
         // Select the first admin by default
         if (admins.length > 0 && !selectedAdmin) {
           setSelectedAdmin(admins[0]);
         }
       } catch (error) {
-        console.error('Error fetching admin users:', error);
+        if (mounted) console.error('Error fetching admin users:', error);
       }
     };
-    
+
     if (isOpen && user) {
       fetchAdmins();
     }
-  }, [isOpen, user, selectedAdmin]);
+    return () => { mounted = false; };
+    // only rerun if opened or user changed, not selectedAdmin!
+    // eslint-disable-next-line
+  }, [isOpen, user]);
 
   // Filter messages for the current conversation
   const conversationMessages = directMessages.filter(
-    msg => 
+    msg =>
       (msg.senderId === user?.id && msg.receiverId === selectedAdmin?.id) ||
       (msg.senderId === selectedAdmin?.id && msg.receiverId === user?.id)
   );
@@ -54,35 +59,38 @@ const DirectMessageDialog: React.FC<DirectMessageDialogProps> = ({ isOpen, onClo
     }
   }, [conversationMessages, isOpen]);
 
-  // Mark messages as read when dialog opens
+  // Mark messages as read when dialog opens or admin changes
   useEffect(() => {
+    let mounted = true;
     const markMessagesAsRead = async () => {
       if (isOpen && user && selectedAdmin) {
         try {
           await markAllDirectMessagesAsRead(selectedAdmin.id, user.id);
-          
+
           // Update local state
+          if (!mounted) return;
           setDirectMessages(
-            directMessages.map(msg => 
+            directMessages.map(msg =>
               msg.senderId === selectedAdmin.id && msg.receiverId === user.id
                 ? { ...msg, isRead: true }
                 : msg
             )
           );
         } catch (error) {
-          console.error('Error marking messages as read:', error);
+          if (mounted) console.error('Error marking messages as read:', error);
         }
       }
     };
-    
+
     markMessagesAsRead();
+    return () => { mounted = false; };
   }, [isOpen, user, selectedAdmin, directMessages, setDirectMessages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!message.trim() || !user || !selectedAdmin || loading) return;
-    
+
     setLoading(true);
     try {
       const newMessage = await createDirectMessage(user.id, selectedAdmin.id, message.trim());
@@ -96,22 +104,24 @@ const DirectMessageDialog: React.FC<DirectMessageDialogProps> = ({ isOpen, onClo
   };
 
   // Format timestamp
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   // Format date
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (date.toDateString() === today.toDateString()) {
+
+    if (d.toDateString() === today.toDateString()) {
       return 'Today';
-    } else if (date.toDateString() === yesterday.toDateString()) {
+    } else if (d.toDateString() === yesterday.toDateString()) {
       return 'Yesterday';
     } else {
-      return date.toLocaleDateString();
+      return d.toLocaleDateString();
     }
   };
 
@@ -128,7 +138,7 @@ const DirectMessageDialog: React.FC<DirectMessageDialogProps> = ({ isOpen, onClo
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className={`fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
