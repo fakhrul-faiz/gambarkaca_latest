@@ -241,6 +241,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
             )}
 
             {formData.role === 'talent' && (
+              <>
               <div>
                 <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
                   Bio
@@ -302,6 +303,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                   )}
                 </div>
               </div>
+              </>
 
               {/* Portfolio Section */}
               <div>
