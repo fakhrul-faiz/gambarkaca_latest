@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, User, Mail, Star, Save, Camera, Instagram, Youtube, Plus, Upload, Video, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext';
 import { Talent } from '../../types';
 import ImageUploadModal from './ImageUploadModal';
 import { supabase } from '../../lib/supabase';
@@ -11,7 +12,7 @@ interface TalentProfileModalProps {
 
 const TalentProfileModal: React.FC<TalentProfileModalProps> = ({ onClose }) => {
   const { user, updateProfile } = useAuth();
-  const { refreshData } = useApp();
+  const { earnings, refreshData } = useApp();
   const talent = user as Talent;
   
   const [loading, setLoading] = useState(false);
@@ -212,10 +213,9 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({ onClose }) => {
   };
 
   // Calculate talent statistics
-  // Use the totalEarnings directly from the talent profile
-  const totalEarnings = talent.totalEarnings;
-  const completedJobs = 0; // This could be fetched from the API if needed
-  const pendingEarnings = 0; // This could be fetched from the API if needed
+  const totalEarnings = earnings.filter(e => e.talentId === talent.id && e.status === 'paid').reduce((sum, e) => sum + e.amount, 0);
+  const completedJobs = earnings.filter(e => e.talentId === talent.id && e.status === 'paid').length;
+  const pendingEarnings = earnings.filter(e => e.talentId === talent.id && e.status === 'pending').reduce((sum, e) => sum + e.amount, 0);
 
   const getRateLevelColor = (level: number) => {
     switch (level) {
