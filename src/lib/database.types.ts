@@ -261,6 +261,41 @@ export interface Database {
           paid_at?: string | null
         }
       }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          message: string
+          type: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          is_read: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          message: string
+          type: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          is_read?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          message?: string
+          type?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          is_read?: boolean | null
+          created_at?: string | null
+        }
+      }
       messages: {
         Row: {
           id: string

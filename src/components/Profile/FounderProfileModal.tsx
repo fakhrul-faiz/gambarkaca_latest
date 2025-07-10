@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, User, Mail, Building, Phone, MapPin, Save, Wallet, Camera } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Founder } from '../../types';
+import ImageUploadModal from './ImageUploadModal';
 
 interface FounderProfileModalProps {
   onClose: () => void;
@@ -12,6 +13,8 @@ const FounderProfileModal: React.FC<FounderProfileModalProps> = ({ onClose }) =>
   const founder = user as Founder;
   
   const [loading, setLoading] = useState(false);
+  const [showImageUploadModal, setShowImageUploadModal] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string>(founder.avatar || '');
   const [formData, setFormData] = useState({
     name: founder.name || '',
     email: founder.email || '',
@@ -28,6 +31,11 @@ const FounderProfileModal: React.FC<FounderProfileModalProps> = ({ onClose }) =>
     }));
   };
 
+  const handleAvatarSave = (imageUrl: string) => {
+    setAvatarPreview(imageUrl);
+    setShowImageUploadModal(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -40,6 +48,7 @@ const FounderProfileModal: React.FC<FounderProfileModalProps> = ({ onClose }) =>
       const updatedFounder: Founder = {
         ...founder,
         ...formData,
+        avatar: avatarPreview,
       };
       
       // In a real app, this would call an API
@@ -77,11 +86,20 @@ const FounderProfileModal: React.FC<FounderProfileModalProps> = ({ onClose }) =>
           {/* Profile Header */}
           <div className="flex items-center space-x-6">
             <div className="relative">
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                {founder.name.charAt(0).toUpperCase()}
-              </div>
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                  {founder.name.charAt(0).toUpperCase()}
+                </div>
+              )}
               <button
                 type="button"
+                onClick={() => setShowImageUploadModal(true)}
                 className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
                 title="Change Avatar"
               >
@@ -280,6 +298,16 @@ const FounderProfileModal: React.FC<FounderProfileModalProps> = ({ onClose }) =>
           </div>
         </form>
       </div>
+
+      {/* Image Upload Modal */}
+      {showImageUploadModal && (
+        <ImageUploadModal
+          onClose={() => setShowImageUploadModal(false)}
+          onSave={handleAvatarSave}
+          title="Update Profile Picture"
+          currentImage={avatarPreview}
+        />
+      )}
     </div>
   );
 };

@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
-import { Package, Search, Filter, Eye, Truck, CheckCircle, Clock, MapPin, User } from 'lucide-react';
+import { Package, Search, Filter, Eye, Truck, CheckCircle, Clock, MapPin, User, DollarSign, Video, Play } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Order } from '../../types';
 import OrderDetailsModal from './OrderDetailsModal';
 import ShipOrderModal from './ShipOrderModal';
+import { updateOrder } from '../../lib/api';
 
 const OrdersPage: React.FC = () => {
   const { user } = useAuth();
-  const { orders, setOrders } = useApp();
+  const { orders, setOrders, refreshData } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [shippingOrder, setShippingOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Filter orders for the current founder
   const founderOrders = orders.filter(order => order.founderId === user?.id);
@@ -82,21 +84,63 @@ const OrdersPage: React.FC = () => {
     setShippingOrder(order);
   };
 
-  const handleShipSuccess = (orderId: string, deliveryInfo: any) => {
-    setOrders(orders.map(order => 
-      order.id === orderId 
-        ? { ...order, status: 'shipped', deliveryInfo }
-        : order
-    ));
-    setShippingOrder(null);
+  const handleShipSuccess = async (orderId: string, deliveryInfo: any) => {
+    setLoading(true);
+    try {
+      // Update order in database
+      await updateOrder(orderId, {
+        status: 'shipped',
+        delivery_address: deliveryInfo.address,
+        tracking_number: deliveryInfo.trackingNumber,
+        courier: deliveryInfo.courier,
+      });
+
+      // Update local state
+      setOrders(orders.map(order => 
+        order.id === orderId 
+          ? { ...order, status: 'shipped', deliveryInfo }
+          : order
+      ));
+      
+      setShippingOrder(null);
+      await refreshData();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('Failed to update order status. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleMarkDelivered = (orderId: string) => {
-    setOrders(orders.map(order => 
-      order.id === orderId 
-        ? { ...order, status: 'delivered' }
-        : order
-    ));
+  const handleMarkDelivered = async (orderId: string) => {
+    setLoading(true);
+    try {
+      // Update order in database
+      await updateOrder(orderId, {
+        status: 'delivered',
+      });
+
+      // Update local state
+      setOrders(orders.map(order => 
+        order.id === orderId 
+          ? { ...order, status: 'delivered' }
+          : order
+      ));
+      
+      await refreshData();
+    } catch (error) {
+      console.error('Error marking order as delivered:', error);
+      alert('Failed to update order status. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('ms-MY', {
+      style: 'currency',
+      currency: 'MYR',
+    }).format(amount);
   };
 
   return (
@@ -221,7 +265,7 @@ const OrdersPage: React.FC = () => {
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Payout: <span className="font-medium text-green-600">${order.payout}</span></p>
+                      <p className="text-sm text-gray-600">Payout: <span className="font-medium text-green-600">{formatCurrency(order.payout)}</span></p>
                       <p className="text-sm text-gray-600">Created: {order.createdAt.toLocaleDateString()}</p>
                     </div>
                   </div>
@@ -243,6 +287,50 @@ const OrdersPage: React.FC = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Review Submission Preview */}
+                  {order.reviewSubmission && order.reviewSubmission.media && Array.isArray(order.reviewSubmission.media) && order.reviewSubmission.media.length > 0 && (
+                    <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <h4 className="text-sm font-medium text-green-800 mb-2">Review Submitted:</h4>
+                      <p className="text-sm text-green-700 mb-2">
+                        Submitted on {order.reviewSubmission.submittedAt?.toLocaleDateString?.() || ''}
+                      </p>
+                      <div className="flex items-center space-x-3">
+                        {/* Conditional rendering for media type */}
+                        {order.reviewSubmission.media[0].type === 'image' ? (
+                          <img
+                            src={order.reviewSubmission.media[0].url}
+                            alt="Review submission"
+                            className="w-20 h-20 object-cover rounded-lg border border-green-200"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 flex items-center justify-center bg-gray-100 rounded-lg border border-green-200 relative">
+                            <Video className="h-8 w-8 text-green-600" />
+                            {/* Optional play overlay */}
+                            <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 rounded-full p-1">
+                              <Play className="h-4 w-4 text-white" />
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm text-green-700 capitalize">
+                            {order.reviewSubmission.media[0].type === 'image'
+                              ? 'Image content'
+                              : 'Video content'}
+                            {order.reviewSubmission.media.length > 1 && (
+                              <span className="ml-1 text-xs text-green-500">
+                                (+{order.reviewSubmission.media.length - 1} more)
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            {order.status === 'review_submitted' ? 'Pending your approval' : 'Approved'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
                 
                 <div className="flex items-center space-x-2">
@@ -257,18 +345,20 @@ const OrdersPage: React.FC = () => {
                   {order.status === 'pending_shipment' && (
                     <button
                       onClick={() => handleShipOrder(order)}
-                      className="px-3 py-1 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                      disabled={loading}
+                      className="px-3 py-1 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
                     >
-                      Ship Order
+                      {loading ? 'Processing...' : 'Ship Order'}
                     </button>
                   )}
                   
                   {order.status === 'shipped' && (
                     <button
                       onClick={() => handleMarkDelivered(order.id)}
-                      className="px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                      disabled={loading}
+                      className="px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
                     >
-                      Mark Delivered
+                      {loading ? 'Processing...' : 'Mark Delivered'}
                     </button>
                   )}
                 </div>

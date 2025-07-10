@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, Building, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Building, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface RegisterFormProps {
@@ -26,20 +26,27 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     setError('');
     setSuccess('');
 
+    // Client-side validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    const success = await register(formData);
-    if (success) {
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    const result = await register(formData);
+    
+    if (result.success) {
       if (formData.role === 'talent') {
         setSuccess('Registration successful! Please wait for admin approval before you can access the platform.');
       } else {
         setSuccess('Registration successful! You are now logged in.');
       }
     } else {
-      setError('Registration failed. Please try again.');
+      setError(result.error || 'Registration failed. Please try again.');
     }
   };
 
@@ -215,11 +222,27 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
             </div>
 
             {error && (
-              <div className="text-red-600 text-sm">{error}</div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-red-800">Registration Error</h4>
+                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                  </div>
+                </div>
+              </div>
             )}
 
             {success && (
-              <div className="text-green-600 text-sm">{success}</div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-green-800">Registration Successful!</h4>
+                    <p className="text-sm text-green-700 mt-1">{success}</p>
+                  </div>
+                </div>
+              </div>
             )}
 
             <div>

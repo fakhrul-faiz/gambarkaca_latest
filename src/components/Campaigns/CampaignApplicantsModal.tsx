@@ -1,27 +1,51 @@
-import React, { useState } from 'react';
-import { X, Users, Star, Eye, Check, XCircle, Search } from 'lucide-react';
-import { Campaign, Talent } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { X, Users, Star, Eye, Check, XCircle, Search, Mail, Calendar, Award, Instagram, Youtube, Camera, Video, Play } from 'lucide-react';
+import { Campaign, Talent, Order, Earning, Transaction, Founder } from '../../types';
+import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import TalentProfileModal from './TalentProfileModal';
+import { updateApplicationStatus, createOrder, createTransaction, updateProfile } from '../../lib/api';
+
 
 interface CampaignApplicantsModalProps {
-  campaign: Campaign;
-  applicants: Talent[];
+  campaignId: string;
   onClose: () => void;
-  onApproveApplicant: (talentId: string) => void;
-  onRejectApplicant: (talentId: string) => void;
 }
 
 const CampaignApplicantsModal: React.FC<CampaignApplicantsModalProps> = ({
-  campaign,
-  applicants,
+  campaignId,
   onClose,
-  onApproveApplicant,
-  onRejectApplicant,
 }) => {
+  const { user, updateProfile } = useAuth();
+  const { campaigns, talents, setCampaigns, orders, setOrders, earnings, setEarnings, transactions, setTransactions, refreshData } = useApp();
   const [selectedTalent, setSelectedTalent] = useState<Talent | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [processingTalentId, setProcessingTalentId] = useState<string | null>(null);
 
-  const filteredApplicants = applicants.filter(talent =>
+  // Find the campaign using the campaignId
+  const campaign = campaigns.find(c => c.id === campaignId);
+  
+  if (!campaign) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl p-6">
+          <p>Campaign not found. Please try again.</p>
+          <button 
+            onClick={onClose}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Get applicant talents
+  const applicantTalents = talents.filter(talent => campaign.applicants.includes(talent.id));
+
+  // Filter applicants based on search term
+  const filteredApplicants = applicantTalents.filter(talent =>
     talent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     talent.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     talent.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -40,54 +64,164 @@ const CampaignApplicantsModal: React.FC<CampaignApplicantsModalProps> = ({
     }
   };
 
-  const handleApprove = (talentId: string) => {
-    onApproveApplicant(talentId);
-    if (selectedTalent && selectedTalent.id === talentId) {
-      setSelectedTalent(null);
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('ms-MY', {
+      style: 'currency',
+      currency: 'MYR',
+    }).format(amount);
+  };
+
+  const isVideoUrl = (url: string) => {
+    return url.includes('.mp4') || url.includes('.mov') || url.includes('.webm') || 
+           url.includes('video') || url.endsWith('.mp4');
+  };
+
+  const handleApprove = async (talentId: string) => {
+    setProcessingTalentId(talentId);
+    
+    try {
+      // Check if founder has sufficient balance
+      const founder = user as Founder;
+      if (founder.walletBalance < campaign.price) {
+        alert('Insufficient wallet balance. Please top up your wallet before approving talents.');
+        return;
+      }
+
+      // Update application status in the database
+      await updateApplicationStatus(campaign.id, talentId, 'approved');
+
+      // Update campaign in local state: remove from applicants, add to approved talents
+      const updatedCampaign = {
+        ...campaign,
+        applicants: campaign.applicants.filter(id => id !== talentId),
+        approvedTalents: [...campaign.approvedTalents, talentId]
+      };
+
+      setCampaigns(campaigns.map(c => c.id === campaign.id ? updatedCampaign : c));
+
+      // Create new order
+      try {
+        const talent = talents.find(t => t.id === talentId);
+        if (talent) {
+          // Create order in database first to get proper UUID
+          const newOrder = await createOrder({
+            campaignId: campaign.id,
+            talentId: talentId,
+            founderId: user?.id || '',
+            status: 'pending_shipment',
+            payout: campaign.price,
+          });
+
+          // Add to local state
+          setOrders([newOrder, ...orders]);
+
+          // Now create hold transaction with proper order ID
+          const holdTransaction = await createTransaction({
+            userId: founder.id,
+            type: 'debit',
+            amount: campaign.price,
+            description: `Payment Hold - ${campaign.title} (Talent Approved)`,
+            relatedJobId: newOrder.id, // Use the actual order ID from database
+          });
+
+          setTransactions([holdTransaction, ...transactions]);
+
+          // Update founder's wallet balance in AuthContext
+          const updatedFounder: Founder = {
+            ...founder,
+            walletBalance: founder.walletBalance - campaign.price,
+          };
+          await updateProfile?.(updatedFounder); 
+          // Refresh data to ensure everything is in sync
+          await refreshData();
+          // Show success message
+          onClose();
+          
+          // If the selected talent was approved, close the talent details modal
+          if (selectedTalent && selectedTalent.id === talentId) {
+            setSelectedTalent(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error creating order or transaction:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error approving talent:', error);
+      alert('Failed to approve talent. Please try again.');
+    } finally {
+      setProcessingTalentId(null);
     }
   };
 
-  const handleReject = (talentId: string) => {
-    onRejectApplicant(talentId);
-    if (selectedTalent && selectedTalent.id === talentId) {
-      setSelectedTalent(null);
+  const handleReject = async (talentId: string) => {
+    setProcessingTalentId(talentId);
+    
+    try {
+      // Update application status in the database
+      await updateApplicationStatus(campaign.id, talentId, 'rejected');
+
+      // Update campaign in local state
+      const updatedCampaign = {
+        ...campaign,
+        applicants: campaign.applicants.filter(id => id !== talentId)
+      };
+
+      setCampaigns(campaigns.map(c => c.id === campaign.id ? updatedCampaign : c));
+      
+      // Refresh data to ensure everything is in sync
+      await refreshData();
+      
+      const talent = talents.find(t => t.id === talentId);
+      alert(`Talent ${talent?.name} application has been rejected.`);
+      
+      // If the selected talent was rejected, close the talent details modal
+      if (selectedTalent && selectedTalent.id === talentId) {
+        setSelectedTalent(null);
+      }
+    } catch (error) {
+      console.error('Error rejecting talent:', error);
+      alert('Failed to reject talent. Please try again.');
+    } finally {
+      setProcessingTalentId(null);
     }
   };
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Campaign Applicants</h2>
-              <p className="text-gray-600">{campaign.title}</p>
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900">Campaign Applicants</h2>
+              <p className="text-sm md:text-base text-gray-600">{campaign.title}</p>
             </div>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5 md:h-6 md:w-6" />
             </button>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             {/* Campaign Info */}
-            <div className="bg-blue-50 rounded-lg p-4 mb-6">
+            <div className="bg-blue-50 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-blue-900">{campaign.title}</h3>
-                  <p className="text-blue-700 text-sm">{campaign.productName} • {campaign.category}</p>
+                  <h3 className="text-sm md:text-base font-semibold text-blue-900">{campaign.title}</h3>
+                  <p className="text-blue-700 text-xs md:text-sm">{campaign.productName} • {campaign.category}</p>
+                  <p className="text-blue-700 text-xs md:text-sm">Payment: {formatCurrency(campaign.price)} per approved talent</p>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Users className="h-5 w-5 text-blue-600" />
-                  <span className="text-blue-900 font-medium">{applicants.length} Applicants</span>
+                  <span className="text-xs md:text-sm text-blue-900 font-medium">{applicantTalents.length} Applicants</span>
                 </div>
               </div>
             </div>
 
             {/* Search */}
-            <div className="mb-6">
+            <div className="mb-4 md:mb-6">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
@@ -95,84 +229,183 @@ const CampaignApplicantsModal: React.FC<CampaignApplicantsModalProps> = ({
                   placeholder="Search applicants by name, email, or skills..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 />
               </div>
             </div>
 
             {/* Applicants List */}
             {filteredApplicants.length > 0 ? (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                 {filteredApplicants.map((talent) => (
-                  <div key={talent.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                          {talent.name.charAt(0).toUpperCase()}
+                  <div key={talent.id} className="bg-white border border-gray-200 rounded-lg p-4 md:p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-start space-x-3 md:space-x-4">
+                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
+                        {talent.avatar ? (
+                          <img 
+                            src={talent.avatar} 
+                            alt={talent.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl">
+                            {talent.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-gray-900 text-base md:text-lg">{talent.name}</h4>
+                          <span className={`px-2 py-0.5 md:py-1 text-xs font-medium rounded-full ${getRateLevelColor(talent.rateLevel)}`}>
+                            {talent.rateLevel} Star
+                          </span>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900">{talent.name}</h4>
-                          <p className="text-gray-600 text-sm">{talent.email}</p>
-                          <div className="flex items-center space-x-3 mt-1">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRateLevelColor(talent.rateLevel)}`}>
-                              {talent.rateLevel} Star
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              ${talent.totalEarnings.toLocaleString()} earned
-                            </span>
-                            {talent.skills.length > 0 && (
-                              <span className="text-xs text-gray-500">
-                                {talent.skills.slice(0, 2).join(', ')}
-                                {talent.skills.length > 2 && ` +${talent.skills.length - 2}`}
-                              </span>
+                        
+                        <div className="flex items-center space-x-1 md:space-x-2 mb-2 md:mb-3">
+                          <Mail className="h-3 w-3 md:h-4 md:w-4 text-gray-400" />
+                          <p className="text-gray-600 text-xs md:text-sm">{talent.email}</p>
+                        </div>
+
+                        {talent.bio && (
+                          <p className="text-gray-700 text-xs md:text-sm mb-2 md:mb-3 line-clamp-2">{talent.bio}</p>
+                        )}
+
+                        {/* Skills */}
+                        {talent.skills.length > 0 && (
+                          <div className="mb-2 md:mb-3">
+                            <p className="text-xs text-gray-500 mb-0.5 md:mb-1">Skills:</p>
+                            <div className="flex flex-wrap gap-0.5 md:gap-1">
+                              {talent.skills.slice(0, 3).map((skill, index) => (
+                                <span
+                                  key={index}
+                                  className="px-1.5 md:px-2 py-0.5 md:py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                              {talent.skills.length > 3 && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                                  +{talent.skills.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Social Media */}
+                        {talent.socialMedia && (Object.values(talent.socialMedia).some(val => val)) && (
+                          <div className="flex items-center space-x-2 md:space-x-3 mb-2 md:mb-3">
+                            {talent.socialMedia.instagram && (
+                              <div className="flex items-center space-x-0.5 md:space-x-1">
+                                <Instagram className="h-3 w-3 md:h-4 md:w-4 text-pink-500" />
+                                <span className="text-xs text-gray-600 truncate max-w-[80px] md:max-w-[120px]">{talent.socialMedia.instagram}</span>
+                              </div>
+                            )}
+                            {talent.socialMedia.youtube && (
+                              <div className="flex items-center space-x-0.5 md:space-x-1">
+                                <Youtube className="h-3 w-3 md:h-4 md:w-4 text-red-500" />
+                                <span className="text-xs text-gray-600">YouTube</span>
+                              </div>
                             )}
                           </div>
+                        )}
+
+                        {/* Portfolio Preview */}
+                        {talent.portfolio && talent.portfolio.length > 0 && (
+                          <div className="mb-3 md:mb-4">
+                            <p className="text-xs text-gray-500 mb-1 md:mb-2">Portfolio:</p>
+                            <div className="flex space-x-1 md:space-x-2 overflow-x-auto pb-1 md:pb-2">
+                              {talent.portfolio.slice(0, 4).map((item, index) => (
+                                <div key={index} className="relative flex-shrink-0">
+                                  {isVideoUrl(item) ? (
+                                    <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center relative">
+                                      <Video className="h-5 w-5 md:h-6 md:w-6 text-gray-400" />
+                                      <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity">
+                                        <video
+                                          src={item}
+                                          className="w-full h-full object-cover"
+                                          muted
+                                        />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={item}
+                                      alt={`Portfolio ${index + 1}`}
+                                      className="w-12 h-12 md:w-16 md:h-16 object-cover rounded border border-gray-200"
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                              {talent.portfolio.length > 4 && (
+                                <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                                  <span className="text-xs text-gray-500">+{talent.portfolio.length - 4}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            onClick={() => setSelectedTalent(talent)}
+                            className="flex-1 px-2 md:px-3 py-1 md:py-2 text-xs md:text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-300"
+                          >
+                            <Eye className="h-3 w-3 md:h-4 md:w-4 inline mr-1" />
+                            View Details
+                          </button>
+                          
+                          <button
+                            onClick={() => handleApprove(talent.id)}
+                            disabled={processingTalentId === talent.id}
+                            className="px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {processingTalentId === talent.id ? (
+                              <span className="flex items-center">
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Processing...
+                              </span>
+                            ) : (
+                              <>
+                                <Check className="h-3 w-3 md:h-4 md:w-4 inline mr-1" />
+                                Approve
+                              </>
+                            )}
+                          </button>
+                          
+                          <button
+                            onClick={() => handleReject(talent.id)}
+                            disabled={processingTalentId === talent.id}
+                            className="px-2 md:px-3 py-1 md:py-2 text-xs md:text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {processingTalentId === talent.id ? (
+                              <span className="flex items-center">
+                                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              </span>
+                            ) : (
+                              <XCircle className="h-3 w-3 md:h-4 md:w-4" />
+                            )}
+                          </button>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => setSelectedTalent(talent)}
-                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View Profile"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        
-                        <button
-                          onClick={() => handleApprove(talent.id)}
-                          className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Approve Application"
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
-                        
-                        <button
-                          onClick={() => handleReject(talent.id)}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Reject Application"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                      </div>
                     </div>
-
-                    {/* Talent Bio Preview */}
-                    {talent.bio && (
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <p className="text-gray-700 text-sm line-clamp-2">{talent.bio}</p>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <div className="text-center py-8 md:py-12">
+                <Users className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-gray-300" />
+                <h3 className="text-base md:text-lg font-medium text-gray-900 mb-1 md:mb-2">
                   {searchTerm ? 'No matching applicants' : 'No applicants yet'}
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-sm md:text-base text-gray-600">
                   {searchTerm 
                     ? 'Try adjusting your search terms' 
                     : 'Applicants will appear here when talents apply to your campaign'
@@ -183,14 +416,20 @@ const CampaignApplicantsModal: React.FC<CampaignApplicantsModalProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Talent Profile Modal */}
+      
+      {/* Talent Details Modal */}
       {selectedTalent && (
         <TalentProfileModal
           talent={selectedTalent}
           onClose={() => setSelectedTalent(null)}
-          onApprove={() => handleApprove(selectedTalent.id)}
-          onReject={() => handleReject(selectedTalent.id)}
+          onApprove={() => {
+            handleApprove(selectedTalent.id);
+            setSelectedTalent(null);
+          }}
+          onReject={() => {
+            handleReject(selectedTalent.id);
+            setSelectedTalent(null);
+          }}
         />
       )}
     </>

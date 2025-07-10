@@ -19,6 +19,7 @@ import FoundersPage from './components/Admin/FoundersPage';
 import TalentsPage from './components/Admin/TalentsPage';
 import AdminCampaignsPage from './components/Admin/CampaignsPage';
 import PaymentsPage from './components/Admin/PaymentsPage';
+import AnalyticsPage from './components/Admin/AnalyticsPage';
 import FounderProfileModal from './components/Profile/FounderProfileModal';
 import TalentProfileModal from './components/Profile/TalentProfileModal';
 import AdminProfileModal from './components/Profile/AdminProfileModal';
@@ -82,6 +83,11 @@ const AppContent: React.FC = () => {
         // Redirect non-admins to dashboard
         setCurrentPage('dashboard');
         return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
+      case 'analytics':
+        if (user.role === 'admin') return <AnalyticsPage />;
+        // Redirect non-admins to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
       case 'marketplace':
         // Only allow talents to access marketplace
         if (user.role === 'talent') {
@@ -139,9 +145,9 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="flex">
-        <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-        <main className="flex-1 p-6">
+      <div className="flex flex-col md:flex-row">
+        <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} className="w-full md:w-64" />
+        <main className="flex-1 p-4 md:p-6">
           {renderCurrentPage()}
         </main>
       </div>

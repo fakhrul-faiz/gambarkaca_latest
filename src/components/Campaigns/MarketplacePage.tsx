@@ -1,24 +1,32 @@
 import React, { useState } from 'react';
-import { Search, Filter, Star, Megaphone, CheckCircle, AlertCircle } from 'lucide-react';
+import { Search, Filter, Star, Megaphone, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import CampaignCard from './CampaignCard';
 import { Talent } from '../../types';
 import { applyCampaign } from '../../lib/api';
+import CampaignDetailsModal from './CampaignDetailsModal'; 
 
 const MarketplacePage: React.FC = () => {
-  const { campaigns, refreshData } = useApp();
+  const { campaigns, refreshData, talents } = useApp();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRateLevel, setSelectedRateLevel] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [appliedCampaignTitle, setAppliedCampaignTitle] = useState('');
-  const [loading, setLoading] = useState(false);
-
+  const [loadingCampaigns, setLoadingCampaigns] = useState<Set<string>>(new Set());
+  const [viewingCampaignDetails, setViewingCampaignDetails] = useState(null);
+  
   const talent = user as Talent;
   const userRateLevel = talent?.rateLevel || 1;
+  const isApproved = talent?.status === 'active';
 
+  const rateOptions = [];
+  for (let i = 1; i <= userRateLevel; i++) {
+    rateOptions.push(i);
+  }
+  
   const categories = [
     'Technology',
     'Fashion & Beauty',
@@ -35,25 +43,86 @@ const MarketplacePage: React.FC = () => {
     'Other'
   ];
 
+  // If talent is not approved, show approval pending message
+  if (!isApproved) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Marketplace</h1>
+          <p className="text-gray-600">Find and apply to campaigns that match your skills</p>
+        </div>
+
+        {/* Approval Pending Message */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="p-4 bg-yellow-100 rounded-full">
+              <Lock className="h-12 w-12 text-yellow-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-900 mb-2">Account Pending Approval</h3>
+              <p className="text-yellow-700 mb-4">
+                Your talent account is currently under review by our admin team. 
+                You'll be able to view and apply to campaigns once your account is approved.
+              </p>
+              <div className="bg-white rounded-lg p-4 border border-yellow-200">
+                <h4 className="font-medium text-yellow-800 mb-2">What happens next?</h4>
+                <ul className="text-sm text-yellow-700 space-y-1 text-left">
+                  <li>• Admin will review your profile and portfolio</li>
+                  <li>• Your rate level (1-3 stars) will be assigned</li>
+                  <li>• You'll receive email notification when approved</li>
+                  <li>• Access to marketplace will be automatically enabled</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Completion Tips */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h4 className="font-medium text-blue-900 mb-3">While you wait, complete your profile:</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
+            <div>
+              <h5 className="font-medium mb-2">Profile Information</h5>
+              <ul className="space-y-1">
+                <li>• Add a professional bio</li>
+                <li>• Upload portfolio samples</li>
+                <li>• List your skills and expertise</li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-medium mb-2">Social Media</h5>
+              <ul className="space-y-1">
+                <li>• Connect Instagram account</li>
+                <li>• Add YouTube channel</li>
+                <li>• Showcase your content style</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Filter campaigns based on talent's rate level and search term
   const filteredCampaigns = campaigns.filter(campaign => {
-    const matchesSearch = campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         campaign.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         campaign.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         campaign.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||               campaign.description.toLowerCase().includes(searchTerm.toLowerCase()) ||          campaign.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       campaign.category.toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchesRateLevel = selectedRateLevel ? campaign.rateLevel === selectedRateLevel : campaign.rateLevel <= userRateLevel;
     const matchesCategory = selectedCategory ? campaign.category === selectedCategory : true;
     const isActive = campaign.status === 'active';
     const notAlreadyApplied = !campaign.applicants.includes(user?.id || '');
+    const notAlreadyApproved = !campaign.approvedTalents.includes(user?.id || '');
     
-    return matchesSearch && matchesRateLevel && matchesCategory && isActive && notAlreadyApplied;
+    return matchesSearch && matchesRateLevel && matchesCategory && isActive && notAlreadyApplied && notAlreadyApproved;
   });
 
   const handleApply = async (campaignId: string) => {
-    if (!user || loading) return;
+    if (!user) return;
+    if (loadingCampaigns.has(campaignId)) return;
 
+    setLoadingCampaigns(prev => new Set(prev).add(campaignId));
     try {
-      setLoading(true);
       
       // Apply to campaign via API
       await applyCampaign(campaignId, user.id);
@@ -77,12 +146,20 @@ const MarketplacePage: React.FC = () => {
       console.error('Error applying to campaign:', error);
       alert('Failed to apply to campaign. Please try again.');
     } finally {
-      setLoading(false);
+      setLoadingCampaigns(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(campaignId);
+        return newSet;
+      });
     }
   };
 
   const appliedCampaigns = campaigns.filter(campaign => 
     campaign.applicants.includes(user?.id || '')
+  );
+
+  const approvedCampaigns = campaigns.filter(campaign => 
+    campaign.approvedTalents.includes(user?.id || '')
   );
 
   return (
@@ -125,14 +202,19 @@ const MarketplacePage: React.FC = () => {
       </div>
 
       {/* Applied Campaigns Summary */}
-      {appliedCampaigns.length > 0 && (
+      {(appliedCampaigns.length > 0 || approvedCampaigns.length > 0) && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center space-x-3">
             <AlertCircle className="h-5 w-5 text-blue-600" />
             <div>
               <p className="text-blue-800 font-medium">Your Applications</p>
               <p className="text-blue-700 text-sm">
-                You have applied to {appliedCampaigns.length} campaign{appliedCampaigns.length !== 1 ? 's' : ''}. 
+                {appliedCampaigns.length > 0 && (
+                  <span>You have applied to {appliedCampaigns.length} campaign{appliedCampaigns.length !== 1 ? 's' : ''}. </span>
+                )}
+                {approvedCampaigns.length > 0 && (
+                  <span>You have been approved for {approvedCampaigns.length} campaign{approvedCampaigns.length !== 1 ? 's' : ''}. </span>
+                )}
                 Check your dashboard for updates.
               </p>
             </div>
@@ -173,10 +255,10 @@ const MarketplacePage: React.FC = () => {
             onChange={(e) => setSelectedRateLevel(e.target.value ? Number(e.target.value) : null)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="">All Levels</option>
-            <option value="1">1 Star</option>
-            <option value="2">2 Star</option>
-            <option value="3">3 Star</option>
+              <option value="">All Levels</option>
+            {rateOptions.map(level => (
+              <option key={level} value={level}>{level} Star</option>
+            ))}
           </select>
         </div>
       </div>
@@ -228,8 +310,9 @@ const MarketplacePage: React.FC = () => {
               key={campaign.id}
               campaign={campaign}
               onApply={() => handleApply(campaign.id)}
-              showApplyButton={true}
-              loading={loading}
+              showApplyButton
+              loading={(id) => loadingCampaigns.has(id)}
+              onView={() => setViewingCampaignDetails(campaign)}
             />
           ))
         ) : (
@@ -247,6 +330,15 @@ const MarketplacePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {viewingCampaignDetails && (
+        <CampaignDetailsModal
+          campaign={viewingCampaignDetails}
+          isTalentView={true}
+          onClose={() => setViewingCampaignDetails(null)}
+          // DO NOT pass onEdit, onDelete, onStatusChange!
+        />
+      )}
     </div>
   );
 };

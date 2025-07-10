@@ -5,10 +5,10 @@ interface TopUpModalProps {
   onClose: () => void;
   onSuccess: (amount: number) => void;
   currentBalance: number;
+  loading: boolean;
 }
 
-const TopUpModal: React.FC<TopUpModalProps> = ({ onClose, onSuccess, currentBalance }) => {
-  const [loading, setLoading] = useState(false);
+const TopUpModal: React.FC<TopUpModalProps> = ({ onClose, onSuccess, currentBalance, loading }) => {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('credit_card');
   const [cardDetails, setCardDetails] = useState({
@@ -75,13 +75,7 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ onClose, onSuccess, currentBala
       return;
     }
 
-    setLoading(true);
-
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
     onSuccess(topUpAmount);
-    setLoading(false);
   };
 
   return (

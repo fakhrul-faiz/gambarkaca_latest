@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Package, Calendar, DollarSign, MapPin, Truck, CheckCircle, Send, MessageCircle, Paperclip } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Package, Calendar, DollarSign, MapPin, Truck, CheckCircle, User, Download } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
-import { Order, Message } from '../../types';
+import { Order } from '../../types';
+import ChatPanel from '../Common/ChatPanel';
 
 interface JobDetailsModalProps {
   job: Order;
@@ -11,257 +12,146 @@ interface JobDetailsModalProps {
 
 const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
   const { user } = useAuth();
-  const { messages, setMessages } = useApp();
-  const [newMessage, setNewMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { messages } = useApp();
+  
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const handleOpenLightbox = (idx: number) => {
+    setLightboxIndex(idx);
+    setLightboxOpen(true);
+  };
+  const handleCloseLightbox = () => setLightboxOpen(false);
 
   // Filter messages for this specific job
   const jobMessages = messages.filter(msg => msg.jobId === job.id);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [jobMessages]);
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending_shipment':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'shipped':
-        return 'bg-blue-100 text-blue-800';
-      case 'delivered':
-        return 'bg-purple-100 text-purple-800';
-      case 'review_submitted':
-        return 'bg-green-100 text-green-800';
-      case 'completed':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'pending_shipment': return 'bg-yellow-100 text-yellow-800';
+      case 'shipped': return 'bg-blue-100 text-blue-800';
+      case 'delivered': return 'bg-purple-100 text-purple-800';
+      case 'review_submitted': return 'bg-green-100 text-green-800';
+      case 'completed': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'pending_shipment':
-        return 'Waiting for Shipment';
-      case 'shipped':
-        return 'Product Shipped';
-      case 'delivered':
-        return 'Product Delivered';
-      case 'review_submitted':
-        return 'Review Submitted';
-      case 'completed':
-        return 'Job Completed';
-      default:
-        return status;
+      case 'pending_shipment': return 'Waiting for Shipment';
+      case 'shipped': return 'Product Shipped';
+      case 'delivered': return 'Product Delivered';
+      case 'review_submitted': return 'Review Submitted';
+      case 'completed': return 'Job Completed';
+      default: return status;
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ms-MY', {
-      style: 'currency',
-      currency: 'MYR',
-    }).format(amount);
-  };
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-
-    const message: Message = {
-      id: Date.now().toString(),
-      jobId: job.id,
-      senderId: user!.id,
-      content: newMessage.trim(),
-      timestamp: new Date(),
-      read: false,
-    };
-
-    setMessages([...messages, message]);
-    setNewMessage('');
-
-    // Simulate founder typing response after talent sends message
-    if (user?.role === 'talent') {
-      setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        // Add automatic founder response for demo
-        const founderResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          jobId: job.id,
-          senderId: job.founderId,
-          content: getAutoResponse(),
-          timestamp: new Date(),
-          read: false,
-        };
-        setMessages(prev => [...prev, founderResponse]);
-      }, 2000);
-    }
-  };
-
-  const getAutoResponse = () => {
-    const responses = [
-      "Thanks for the update! Looking forward to seeing your content.",
-      "Great! Let me know if you need any clarification on the requirements.",
-      "Perfect! Take your time to create quality content.",
-      "Sounds good! Feel free to reach out if you have any questions.",
-      "Excellent! I'm excited to see the final result.",
-      "Thank you for keeping me informed about the progress.",
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
-
-  const handleFileAttachment = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // In a real app, you'd upload the file and get a URL
-      const message: Message = {
-        id: Date.now().toString(),
-        jobId: job.id,
-        senderId: user!.id,
-        content: `📎 Shared a file: ${file.name}`,
-        timestamp: new Date(),
-        read: false,
-      };
-      setMessages([...messages, message]);
-    }
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
-    });
-  };
-
-  const formatDate = (date: Date) => {
-    const today = new Date();
-    const messageDate = new Date(date);
-    
-    if (messageDate.toDateString() === today.toDateString()) {
-      return 'Today';
-    }
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (messageDate.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    }
-    
-    return messageDate.toLocaleDateString();
-  };
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('ms-MY', { style: 'currency', currency: 'MYR' }).format(amount);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex">
-        {/* Left Panel - Job Details */}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] md:max-h-[90vh] overflow-hidden flex flex-col md:flex-row">
+        {/* Left Panel - Job Details - Now first on mobile */}
         <div className="flex-1 overflow-y-auto">
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">Job Details</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="h-6 w-6" />
+          <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900">Job Details</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <X className="h-5 w-5 md:h-6 md:w-6" />
             </button>
           </div>
 
-          <div className="p-6 space-y-6">
+          <div className="p-4 md:p-6 space-y-4 md:space-y-6">
             {/* Job Header */}
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">{job.campaignTitle}</h3>
-                <p className="text-gray-600">Job #{job.id}</p>
+                <h3 className="text-base md:text-lg font-semibold text-gray-900">{job.campaignTitle}</h3>
+                <p className="text-xs md:text-sm text-gray-600">Job #{job.id}</p>
               </div>
-              <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(job.status)}`}>
+              <span className={`px-2 md:px-3 py-1 text-xs md:text-sm font-medium rounded-full ${getStatusColor(job.status)}`}>
                 {getStatusLabel(job.status)}
               </span>
             </div>
 
             {/* Job Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <div className="space-y-3 md:space-y-4">
                 <div className="flex items-center space-x-3">
-                  <Package className="h-5 w-5 text-gray-400" />
+                  <Package className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                   <div>
-                    <p className="text-sm text-gray-600">Product</p>
-                    <p className="font-medium text-gray-900">{job.productName}</p>
+                    <p className="text-xs md:text-sm text-gray-600">Product</p>
+                    <p className="text-sm md:text-base font-medium text-gray-900">{job.productName}</p>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-3">
-                  <DollarSign className="h-5 w-5 text-gray-400" />
+                  <User className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                   <div>
-                    <p className="text-sm text-gray-600">Payout</p>
-                    <p className="font-medium text-green-600">{formatCurrency(job.payout)}</p>
+                    <p className="text-xs md:text-sm text-gray-600">Talent</p>
+                    <p className="text-sm md:text-base font-medium text-gray-900">{job.talentName}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
+                  <div>
+                    <p className="text-xs md:text-sm text-gray-600">Payout</p>
+                    <p className="text-sm md:text-base font-medium text-green-600">{formatCurrency(job.payout)}</p>
                   </div>
                 </div>
               </div>
-
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
                 <div className="flex items-center space-x-3">
-                  <Calendar className="h-5 w-5 text-gray-400" />
+                  <Calendar className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                   <div>
-                    <p className="text-sm text-gray-600">Job Started</p>
-                    <p className="font-medium text-gray-900">{job.createdAt.toLocaleDateString()}</p>
+                    <p className="text-xs md:text-sm text-gray-600">Job Started</p>
+                    <p className="text-sm md:text-base font-medium text-gray-900">{job.createdAt.toLocaleDateString()}</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Status Timeline */}
-            <div className="border-t border-gray-200 pt-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Job Progress</h4>
-              <div className="space-y-4">
+            <div className="border-t border-gray-200 pt-4 md:pt-6">
+              <h4 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Job Progress</h4>
+              <div className="space-y-3 md:space-y-4">
                 <div className="flex items-center space-x-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center ${
                     ['pending_shipment', 'shipped', 'delivered', 'review_submitted', 'completed'].includes(job.status)
                       ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
                   }`}>
-                    <CheckCircle className="h-4 w-4" />
+                    <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Job Assigned</p>
-                    <p className="text-sm text-gray-600">You were approved for this campaign</p>
+                    <p className="text-sm md:text-base font-medium text-gray-900">Job Assigned</p>
+                    <p className="text-xs md:text-sm text-gray-600">You were approved for this campaign</p>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center ${
                     ['shipped', 'delivered', 'review_submitted', 'completed'].includes(job.status)
                       ? 'bg-green-500 text-white' : job.status === 'pending_shipment' ? 'bg-yellow-500 text-white' : 'bg-gray-300 text-gray-600'
                   }`}>
-                    <Truck className="h-4 w-4" />
+                    <Truck className="h-3 w-3 md:h-4 md:w-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Product Shipped</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm md:text-base font-medium text-gray-900">Product Shipped</p>
+                    <p className="text-xs md:text-sm text-gray-600">
                       {job.status === 'pending_shipment' ? 'Waiting for shipment' : 'Product has been shipped to you'}
                     </p>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center ${
                     ['delivered', 'review_submitted', 'completed'].includes(job.status)
                       ? 'bg-green-500 text-white' : job.status === 'shipped' ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-600'
                   }`}>
-                    <MapPin className="h-4 w-4" />
+                    <MapPin className="h-3 w-3 md:h-4 md:w-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Product Delivered</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm md:text-base font-medium text-gray-900">Product Delivered</p>
+                    <p className="text-xs md:text-sm text-gray-600">
                       {['delivered', 'review_submitted', 'completed'].includes(job.status) 
                         ? 'Product delivered successfully' 
                         : job.status === 'shipped' 
@@ -271,17 +161,16 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
                     </p>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  <div className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center ${
                     ['review_submitted', 'completed'].includes(job.status)
                       ? 'bg-green-500 text-white' : job.status === 'delivered' ? 'bg-purple-500 text-white' : 'bg-gray-300 text-gray-600'
                   }`}>
-                    <CheckCircle className="h-4 w-4" />
+                    <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">Review Submitted</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm md:text-base font-medium text-gray-900">Review Submitted</p>
+                    <p className="text-xs md:text-sm text-gray-600">
                       {['review_submitted', 'completed'].includes(job.status) 
                         ? 'Review content submitted for approval' 
                         : job.status === 'delivered' 
@@ -295,198 +184,166 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ job, onClose }) => {
             </div>
 
             {/* Delivery Information */}
-            {job.deliveryInfo && job.status !== 'pending_shipment' && (
-              <div className="border-t border-gray-200 pt-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Delivery Information</h4>
-                
+            {job.deliveryInfo && (
+              <div className="border-t border-gray-200 pt-4 md:pt-6">
+                <h4 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Delivery Information</h4>
                 {job.deliveryInfo.trackingNumber && (
-                  <div className="flex items-center space-x-3 mb-4">
-                    <Truck className="h-5 w-5 text-gray-400" />
+                  <div className="flex items-center space-x-3 mb-3 md:mb-4">
+                    <Truck className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                     <div>
-                      <p className="text-sm text-gray-600">Tracking Number</p>
-                      <p className="font-medium text-gray-900">{job.deliveryInfo.trackingNumber}</p>
+                      <p className="text-xs md:text-sm text-gray-600">Tracking Number</p>
+                      <p className="text-sm md:text-base font-medium text-gray-900">{job.deliveryInfo.trackingNumber}</p>
                     </div>
                   </div>
                 )}
-
                 {job.deliveryInfo.courier && (
                   <div className="flex items-center space-x-3">
-                    <Package className="h-5 w-5 text-gray-400" />
+                    <Package className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                     <div>
-                      <p className="text-sm text-gray-600">Courier</p>
-                      <p className="font-medium text-gray-900">{job.deliveryInfo.courier}</p>
+                      <p className="text-xs md:text-sm text-gray-600">Courier</p>
+                      <p className="text-sm md:text-base font-medium text-gray-900">{job.deliveryInfo.courier}</p>
+                    </div>
+                  </div>
+                )}
+                {job.deliveryInfo.address && (
+                  <div className="flex items-center space-x-3 mt-3 md:mt-4">
+                    <MapPin className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
+                    <div>
+                      <p className="text-xs md:text-sm text-gray-600">Delivery Address</p>
+                      <p className="text-sm md:text-base font-medium text-gray-900">{job.deliveryInfo.address}</p>
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Review Submission */}
-            {job.reviewSubmission && (
-              <div className="border-t border-gray-200 pt-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Your Review Submission</h4>
-                <div className="bg-green-50 rounded-lg p-4">
-                  <p className="text-sm text-green-600 mb-2">
+            {/* Review Submission with Lightbox Preview */}
+            {job.reviewSubmission && job.reviewSubmission.media && job.reviewSubmission.media.length > 0 && (
+              <div className="border-t border-gray-200 pt-4 md:pt-6">
+                <h4 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Your Review Submission</h4>
+                <div className="bg-green-50 rounded-lg p-3 md:p-4">
+                  <p className="text-xs md:text-sm text-green-600 mb-2">
                     Review submitted on {job.reviewSubmission.submittedAt.toLocaleDateString()}
                   </p>
-                  <div className="mt-3">
-                    {job.reviewSubmission.mediaType === 'image' ? (
-                      <img
-                        src={job.reviewSubmission.mediaUrl}
-                        alt="Review submission"
-                        className="w-full max-w-md h-48 object-cover rounded-lg"
-                      />
-                    ) : (
-                      <video
-                        src={job.reviewSubmission.mediaUrl}
-                        controls
-                        className="w-full max-w-md h-48 rounded-lg"
-                      />
+                  {job.reviewSubmission.notes && (
+                    <div className="mt-2 mb-3 md:mb-4 p-2 bg-white rounded text-gray-700 border border-green-100">
+                      <p className="text-xs md:text-sm font-semibold mb-1">Talent's Notes:</p>
+                      <p className="text-xs md:text-sm">{job.reviewSubmission.notes}</p>
+                    </div>
+                  )}
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                    {job.reviewSubmission.media.map((media, idx) =>
+                      media.type === 'image' ? (
+                        <div key={idx} className="relative group">
+                          <img
+                            src={media.url}
+                            alt={`Review submission ${idx + 1}`}
+                            className="w-full h-32 md:h-48 object-cover rounded-lg cursor-pointer"
+                            onClick={() => handleOpenLightbox(idx)}
+                          />
+                          <a
+                            href={media.url}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute top-2 right-2 bg-white bg-opacity-90 rounded-full p-1 shadow transition group-hover:bg-green-200"
+                            title="Download"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <Download className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                          </a>
+                        </div>
+                      ) : (
+                        <div key={idx} className="relative group">
+                          <video
+                            src={media.url}
+                            controls
+                            className="w-full h-32 md:h-48 rounded-lg cursor-pointer"
+                            onClick={() => handleOpenLightbox(idx)}
+                          />
+                          <a
+                            href={media.url}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute top-2 right-2 bg-white bg-opacity-90 rounded-full p-1 shadow transition group-hover:bg-green-200"
+                            title="Download"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <Download className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                          </a>
+                        </div>
+                      )
                     )}
                   </div>
                 </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Right Panel - Messaging */}
-        <div className="w-96 border-l border-gray-200 flex flex-col">
-          {/* Chat Header */}
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center space-x-3">
-              <MessageCircle className="h-5 w-5 text-blue-600" />
-              <div>
-                <h3 className="font-semibold text-gray-900">Chat with Founder</h3>
-                <p className="text-sm text-gray-600">Discuss job progress</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-            {jobMessages.length === 0 ? (
-              <div className="text-center py-8">
-                <MessageCircle className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-500 text-sm">No messages yet</p>
-                <p className="text-gray-400 text-xs">Start a conversation with the founder</p>
-              </div>
-            ) : (
-              <>
-                {jobMessages.map((message, index) => {
-                  const isTalent = message.senderId === user?.id;
-                  const showDate = index === 0 || 
-                    formatDate(new Date(message.timestamp)) !== formatDate(new Date(jobMessages[index - 1].timestamp));
-
-                  return (
-                    <div key={message.id}>
-                      {showDate && (
-                        <div className="text-center py-2">
-                          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">
-                            {formatDate(new Date(message.timestamp))}
-                          </span>
-                        </div>
-                      )}
-                      
-                      <div className={`flex ${isTalent ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          isTalent 
-                            ? 'bg-blue-600 text-white' 
-                            : 'bg-white text-gray-900 border border-gray-200'
-                        }`}>
-                          <p className="text-sm">{message.content}</p>
-                          <p className={`text-xs mt-1 ${
-                            isTalent ? 'text-blue-100' : 'text-gray-500'
-                          }`}>
-                            {formatTime(new Date(message.timestamp))}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-white text-gray-900 border border-gray-200 px-4 py-2 rounded-lg">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      </div>
-                    </div>
+            {/* Lightbox Modal for Fullscreen Media */}
+            {lightboxOpen && job.reviewSubmission && job.reviewSubmission.media && (
+              <div className="fixed inset-0 z-[100] bg-black bg-opacity-80 flex flex-col items-center justify-center transition-all">
+                <button
+                  className="absolute top-4 right-4 md:top-6 md:right-6 text-white text-2xl"
+                  onClick={handleCloseLightbox}
+                  aria-label="Close"
+                >
+                  <X className="w-8 h-8 md:w-10 md:h-10" />
+                </button>
+                <div className="max-w-3xl max-h-[70vh] md:max-h-[80vh] flex items-center justify-center">
+                  {job.reviewSubmission.media[lightboxIndex].type === 'image' ? (
+                    <img
+                      src={job.reviewSubmission.media[lightboxIndex].url}
+                      alt={`Review submission ${lightboxIndex + 1}`}
+                      className="max-h-[70vh] md:max-h-[80vh] max-w-full rounded-lg shadow-lg"
+                    />
+                  ) : (
+                    <video
+                      src={job.reviewSubmission.media[lightboxIndex].url}
+                      controls
+                      autoPlay
+                      className="max-h-[70vh] md:max-h-[80vh] max-w-full rounded-lg shadow-lg"
+                    />
+                  )}
+                </div>
+                {job.reviewSubmission.media.length > 1 && (
+                  <div className="mt-4 md:mt-6 flex space-x-2 md:space-x-4 overflow-x-auto px-2">
+                    {job.reviewSubmission.media.map((m, idx) => (
+                      <button
+                        key={idx}
+                        className={`w-12 h-12 md:w-16 md:h-16 rounded border-2 ${lightboxIndex === idx ? 'border-blue-400' : 'border-transparent'}`}
+                        onClick={() => setLightboxIndex(idx)}
+                      >
+                        {m.type === 'image' ? (
+                          <img src={m.url} alt="" className="w-full h-full object-cover rounded" />
+                        ) : (
+                          <video src={m.url} className="w-full h-full object-cover rounded" />
+                        )}
+                      </button>
+                    ))}
                   </div>
                 )}
-              </>
+              </div>
             )}
-            <div ref={messagesEndRef} />
           </div>
 
-          {/* Message Input */}
-          <div className="p-4 border-t border-gray-200 bg-white">
-            <form onSubmit={handleSendMessage} className="space-y-3">
-              <div className="flex space-x-2">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type your message..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleFileAttachment}
-                  className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Attach File"
-                >
-                  <Paperclip className="h-4 w-4" />
-                </button>
-                <button
-                  type="submit"
-                  disabled={!newMessage.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
-              
-              {/* Quick Actions */}
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setNewMessage("I've received the product and will start working on the review.")}
-                  className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                >
-                  📦 Received
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewMessage("I have a question about the requirements.")}
-                  className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                >
-                  ❓ Question
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewMessage("The review content is ready for submission!")}
-                  className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                >
-                  ✅ Ready
-                </button>
-              </div>
-            </form>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept="image/*,video/*,.pdf,.doc,.docx"
-              onChange={handleFileChange}
-            />
+          <div className="flex justify-end p-4 md:p-6 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="px-3 md:px-4 py-1.5 md:py-2 text-sm md:text-base text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Close
+            </button>
           </div>
         </div>
+        
+        {/* Right Panel - Chat */}
+        <ChatPanel
+          className="order-last border-t md:border-t-0 md:border-l"
+          recipientName="Founder"
+          recipientRole="founder"
+          messages={jobMessages}
+        />
       </div>
     </div>
   );

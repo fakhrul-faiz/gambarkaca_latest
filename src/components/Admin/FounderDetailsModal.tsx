@@ -1,21 +1,7 @@
 import React from 'react';
 import { X, Building, Mail, Phone, MapPin, Wallet, Calendar, Megaphone, DollarSign, CheckCircle, Ban, Star } from 'lucide-react';
-
-interface Founder {
-  id: string;
-  email: string;
-  name: string;
-  role: 'founder';
-  status: 'active' | 'pending' | 'suspended';
-  company?: string;
-  phone?: string;
-  address?: string;
-  walletBalance: number;
-  totalCampaigns: number;
-  totalSpent: number;
-  createdAt: Date;
-  lastLogin?: Date;
-}
+import { Founder } from '../../types'; // Use central type
+import { useApp } from '../../context/AppContext';
 
 interface FounderDetailsModalProps {
   founder: Founder;
@@ -28,6 +14,8 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
   onClose, 
   onStatusChange 
 }) => {
+  const { campaigns, orders, transactions, talents } = useApp();
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -48,10 +36,81 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
     }).format(amount);
   };
 
-  const handleStatusChange = (newStatus: 'active' | 'suspended') => {
+  const handleStatusChangeClick = (newStatus: 'active' | 'suspended') => {
     onStatusChange(founder.id, newStatus);
     onClose();
   };
+
+  // --- Recent Activity Logic ---
+  // 1. Get this founder's campaigns, orders, transactions.
+  const founderCampaigns = campaigns.filter(c => c.founderId === founder.id);
+  const founderOrders = orders.filter(o => o.founderId === founder.id);
+  const founderTransactions = transactions.filter(t => t.userId === founder.id);
+  const totalSpent = founderTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const totalCampaigns = campaigns.filter(c => c.founderId === founder.id).length;
+
+  // 2. Compose activity items
+  const recentActivity: {
+    message: string;
+    timestamp: Date;
+  }[] = [];
+
+  // Campaign creation events
+  founderCampaigns.forEach(c => {
+    recentActivity.push({
+      message: `Created campaign "${c.title}"`,
+      timestamp: c.createdAt ? new Date(c.createdAt) : new Date(),
+    });
+  });
+
+  // Order status updates (e.g. completed, delivered, etc)
+  founderOrders.forEach(order => {
+    if (order.status === 'completed') {
+      recentActivity.push({
+        message: `Completed order for "${order.campaignTitle}" (${order.productName})`,
+        timestamp: order.updatedAt || order.createdAt || new Date(),
+      });
+    } else if (order.status === 'delivered') {
+      recentActivity.push({
+        message: `Delivered product for "${order.campaignTitle}"`,
+        timestamp: order.updatedAt || order.createdAt || new Date(),
+      });
+    }
+    // Add more order status checks as needed
+  });
+
+  // Transaction events
+  founderTransactions.forEach(t => {
+    if (t.type === 'debit') {
+      recentActivity.push({
+        message: `Spent ${formatCurrency(Number(t.amount))} for "${t.description}"`,
+        timestamp: t.createdAt ? new Date(t.createdAt) : new Date(),
+      });
+    } else if (t.type === 'credit') {
+      recentActivity.push({
+        message: `Received ${formatCurrency(Number(t.amount))} - "${t.description}"`,
+        timestamp: t.createdAt ? new Date(t.createdAt) : new Date(),
+      });
+    }
+  });
+
+  // Optionally: show talents approved (if you want)
+  founderOrders.forEach(order => {
+    if (order.status === 'pending_shipment') {
+      const talent = talents.find(t => t.id === order.talentId);
+      recentActivity.push({
+        message: `Approved talent ${talent?.name || '—'} for "${order.campaignTitle}"`,
+        timestamp: order.createdAt || new Date(),
+      });
+    }
+  });
+
+  // 3. Sort by timestamp desc, limit 5
+  const sortedActivity = recentActivity
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    .slice(0, 5);
+
+  // --- End activity logic ---
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -69,9 +128,18 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
         <div className="p-6 space-y-6">
           {/* Header Section */}
           <div className="flex items-start space-x-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-              {founder.name.charAt(0).toUpperCase()}
+            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-md object-cover">
+              {founder.avatar ? (
+                <img
+                  src={founder.avatar}
+                  alt={founder.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                founder.name.charAt(0).toUpperCase()
+              )}
             </div>
+
             <div className="flex-1">
               <h3 className="text-xl font-bold text-gray-900">{founder.name}</h3>
               <p className="text-gray-600">{founder.email}</p>
@@ -97,7 +165,6 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
                   <p className="font-medium text-gray-900">{founder.email}</p>
                 </div>
               </div>
-
               {founder.phone && (
                 <div className="flex items-center space-x-3">
                   <Phone className="h-5 w-5 text-gray-400" />
@@ -107,7 +174,6 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
                   </div>
                 </div>
               )}
-
               {founder.company && (
                 <div className="flex items-center space-x-3">
                   <Building className="h-5 w-5 text-gray-400" />
@@ -117,7 +183,6 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
                   </div>
                 </div>
               )}
-
               {founder.address && (
                 <div className="flex items-center space-x-3">
                   <MapPin className="h-5 w-5 text-gray-400" />
@@ -149,7 +214,7 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
                   <DollarSign className="h-8 w-8 text-blue-600" />
                   <div>
                     <p className="text-sm text-blue-600 font-medium">Total Spent</p>
-                    <p className="text-2xl font-bold text-blue-900">{formatCurrency(founder.totalSpent)}</p>
+                    <p className="text-2xl font-bold text-blue-900">{formatCurrency(totalSpent)}</p>
                   </div>
                 </div>
               </div>
@@ -159,7 +224,7 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
                   <Megaphone className="h-8 w-8 text-purple-600" />
                   <div>
                     <p className="text-sm text-purple-600 font-medium">Total Campaigns</p>
-                    <p className="text-2xl font-bold text-purple-900">{founder.totalCampaigns}</p>
+                      <p className="text-2xl font-bold text-purple-900">{totalCampaigns}</p>
                   </div>
                 </div>
               </div>
@@ -187,7 +252,6 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
                   <p className="font-medium text-gray-900">{founder.createdAt.toLocaleDateString()}</p>
                 </div>
               </div>
-
               {founder.lastLogin && (
                 <div className="flex items-center space-x-3">
                   <CheckCircle className="h-5 w-5 text-gray-400" />
@@ -205,10 +269,19 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
             <h4 className="text-lg font-semibold text-gray-900 mb-3">Recent Activity</h4>
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="space-y-2 text-sm text-gray-600">
-                <p>• Created "Tech Product Launch" campaign - 5 days ago</p>
-                <p>• Approved talent application from Jane Talent - 1 week ago</p>
-                <p>• Added RM1000 to wallet balance - 2 weeks ago</p>
-                <p>• Updated company profile information - 3 weeks ago</p>
+                {sortedActivity.length > 0 ? (
+                  sortedActivity.map((act, i) => (
+                    <div key={i} className="flex items-center space-x-2">
+                      <span>•</span>
+                      <span>{act.message}</span>
+                      <span className="text-xs text-gray-400 ml-2">
+                        {act.timestamp.toLocaleDateString()} {act.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p>No recent activity found.</p>
+                )}
               </div>
             </div>
           </div>
@@ -225,7 +298,7 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
           
           {founder.status === 'pending' && (
             <button
-              onClick={() => handleStatusChange('active')}
+              onClick={() => handleStatusChangeClick('active')}
               className="px-6 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-colors flex items-center space-x-2"
             >
               <CheckCircle className="h-4 w-4" />
@@ -235,7 +308,7 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
           
           {founder.status === 'active' && (
             <button
-              onClick={() => handleStatusChange('suspended')}
+              onClick={() => handleStatusChangeClick('suspended')}
               className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center space-x-2"
             >
               <Ban className="h-4 w-4" />
@@ -245,7 +318,7 @@ const FounderDetailsModal: React.FC<FounderDetailsModalProps> = ({
           
           {founder.status === 'suspended' && (
             <button
-              onClick={() => handleStatusChange('active')}
+              onClick={() => handleStatusChangeClick('active')}
               className="px-6 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-colors flex items-center space-x-2"
             >
               <CheckCircle className="h-4 w-4" />

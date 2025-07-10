@@ -4,8 +4,8 @@ import { signIn, signUp, signOut, getCurrentUser, updateProfile as updateUserPro
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (userData: any) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (userData: any) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateProfile?: (userData: User) => Promise<void>;
   loading: boolean;
@@ -33,64 +33,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.error('Login error:masuk');
       setLoading(true);
       const { profile } = await signIn(email, password);
       setUser(profile);
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('Login error:', error);
-      return false;
+      return { 
+        success: false, 
+        error: error.message || 'Login failed. Please try again.' 
+      };
     } finally {
       setLoading(false);
     }
   };
 
-const register = async (userData: any): Promise<boolean> => {
-  try {
-    setLoading(true);
-    await signUp(userData.email, userData.password, {
-      name: userData.name,
-      role: userData.role,
-      company: userData.company,
-      bio: userData.bio,
-    });
-
-    // For talents, they need admin approval, so don't auto-login
-    if (userData.role === 'talent') {
-      return true;
+  const register = async (userData: any): Promise<{ success: boolean; error?: string }> => {
+    try {
+      setLoading(true);
+      await signUp(userData.email, userData.password, {
+        name: userData.name,
+        role: userData.role,
+        company: userData.company,
+        bio: userData.bio,
+      });
+      
+      // For talents, they need admin approval, so don't auto-login
+      if (userData.role === 'talent') {
+        return { success: true };
+      }
+      
+      // For founders and admins, auto-login after registration
+      try {
+        const { profile } = await signIn(userData.email, userData.password);
+        setUser(profile);
+        return { success: true };
+      } catch (loginError: any) {
+        // Registration succeeded but login failed
+        return { 
+          success: true, 
+          error: 'Account created successfully! Please sign in to continue.' 
+        };
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Registration failed. Please try again.' 
+      };
+    } finally {
+      setLoading(false);
     }
-
-    // For founders and admins, auto-login after registration
-    const { profile } = await signIn(userData.email, userData.password);
-    setUser(profile);
-    return true;
-  } catch (error: any) {
-    if (
-      error?.message?.toLowerCase().includes('user already registered') ||
-      error?.status === 422
-    ) {
-      alert(
-        "This email is already registered. Please log in or use the 'Forgot Password' option."
-      );
-    } else {
-      alert("Registration failed. Please try again later.");
-    }
-    console.error('Registration error:', error);
-    return false;
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const updateProfile = async (userData: User) => {
     try {
       const updates: any = {
         name: userData.name,
         email: userData.email,
+        avatar_url: userData.avatar,
+        phone: userData.phone,
+        address: userData.address
       };
 
       if (userData.role === 'founder') {

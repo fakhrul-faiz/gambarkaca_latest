@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, Search, Filter, Calendar, TrendingUp, Award, Package, CheckCircle, Clock, Star, Download, Eye } from 'lucide-react';
+import { DollarSign, Search, Filter, Calendar, TrendingUp, Award, Package, CheckCircle, Clock, Star, Eye, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Talent } from '../../types';
@@ -28,7 +28,6 @@ const EarningsPage: React.FC = () => {
     if (periodFilter !== 'all') {
       const now = new Date();
       const earningDate = new Date(earning.earnedAt);
-      
       switch (periodFilter) {
         case 'today':
           matchesPeriod = earningDate.toDateString() === now.toDateString();
@@ -46,7 +45,6 @@ const EarningsPage: React.FC = () => {
           break;
       }
     }
-    
     return matchesSearch && matchesStatus && matchesPeriod;
   });
 
@@ -99,112 +97,95 @@ const EarningsPage: React.FC = () => {
   const averageEarning = completedJobs > 0 ? paidEarnings / completedJobs : 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 pb-8">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Earnings</h1>
-          <p className="text-gray-600">Track your earnings and payment history</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Earnings</h1>
+          <p className="text-gray-600 text-sm">Track your earnings and payment history</p>
         </div>
       </div>
 
       {/* Earnings Overview */}
-      <div className="bg-gradient-to-br from-green-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-gradient-to-br from-green-600 via-blue-600 to-purple-600 rounded-2xl p-5 sm:p-8 text-white">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
-            <h2 className="text-lg font-medium text-green-100">Total Earnings</h2>
-            <p className="text-4xl font-bold">{formatCurrency(totalEarnings)}</p>
+            <h2 className="text-base sm:text-lg font-medium text-green-100">Total Earnings</h2>
+            <p className="text-3xl sm:text-4xl font-bold">{formatCurrency(totalEarnings)}</p>
           </div>
-          <div className="p-4 bg-white bg-opacity-20 rounded-full">
+          <div className="p-4 bg-white bg-opacity-20 rounded-full self-start sm:self-auto">
             <DollarSign className="h-8 w-8" />
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white bg-opacity-10 rounded-lg p-4">
-            <div className="flex items-center space-x-3">
-              <CheckCircle className="h-6 w-6 text-green-300" />
-              <div>
-                <p className="text-sm text-green-100">Paid</p>
-                <p className="text-xl font-bold">{formatCurrency(paidEarnings)}</p>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-white bg-opacity-10 rounded-lg p-4 flex items-center space-x-3">
+            <CheckCircle className="h-6 w-6 text-green-300" />
+            <div>
+              <p className="text-xs sm:text-sm text-green-100">Paid</p>
+              <p className="text-lg sm:text-xl font-bold">{formatCurrency(paidEarnings)}</p>
             </div>
           </div>
           
-          <div className="bg-white bg-opacity-10 rounded-lg p-4">
-            <div className="flex items-center space-x-3">
-              <Clock className="h-6 w-6 text-yellow-300" />
-              <div>
-                <p className="text-sm text-yellow-100">Pending</p>
-                <p className="text-xl font-bold">{formatCurrency(pendingEarnings)}</p>
-              </div>
+          <div className="bg-white bg-opacity-10 rounded-lg p-4 flex items-center space-x-3">
+            <Clock className="h-6 w-6 text-yellow-300" />
+            <div>
+              <p className="text-xs sm:text-sm text-yellow-100">Pending</p>
+              <p className="text-lg sm:text-xl font-bold">{formatCurrency(pendingEarnings)}</p>
             </div>
           </div>
           
-          <div className="bg-white bg-opacity-10 rounded-lg p-4">
-            <div className="flex items-center space-x-3">
-              <Calendar className="h-6 w-6 text-blue-300" />
-              <div>
-                <p className="text-sm text-blue-100">This Month</p>
-                <p className="text-xl font-bold">{formatCurrency(thisMonthEarnings)}</p>
-              </div>
+          <div className="bg-white bg-opacity-10 rounded-lg p-4 flex items-center space-x-3">
+            <Calendar className="h-6 w-6 text-blue-300" />
+            <div>
+              <p className="text-xs sm:text-sm text-blue-100">This Month</p>
+              <p className="text-lg sm:text-xl font-bold">{formatCurrency(thisMonthEarnings)}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-green-500">
-              <CheckCircle className="h-6 w-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Completed Jobs</p>
-              <p className="text-2xl font-bold text-gray-900">{completedJobs}</p>
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="p-2 rounded-lg bg-green-500">
+            <CheckCircle className="h-5 w-5 text-white" />
+          </div>
+          <div className="ml-3">
+            <p className="text-xs sm:text-sm font-medium text-gray-600">Completed Jobs</p>
+            <p className="text-lg font-bold text-gray-900">{completedJobs}</p>
           </div>
         </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-blue-500">
-              <TrendingUp className="h-6 w-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Average Earning</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(averageEarning)}</p>
-            </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="p-2 rounded-lg bg-blue-500">
+            <TrendingUp className="h-5 w-5 text-white" />
+          </div>
+          <div className="ml-3">
+            <p className="text-xs sm:text-sm font-medium text-gray-600">Average Earning</p>
+            <p className="text-lg font-bold text-gray-900">{formatCurrency(averageEarning)}</p>
           </div>
         </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-purple-500">
-              <Star className="h-6 w-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Success Rate</p>
-              <p className="text-2xl font-bold text-gray-900">94%</p>
-            </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="p-2 rounded-lg bg-purple-500">
+            <Star className="h-5 w-5 text-white" />
+          </div>
+          <div className="ml-3">
+            <p className="text-xs sm:text-sm font-medium text-gray-600">Success Rate</p>
+            <p className="text-lg font-bold text-gray-900">94%</p>
           </div>
         </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-yellow-500">
-              <Award className="h-6 w-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Rate Level</p>
-              <p className="text-2xl font-bold text-gray-900">{talent.rateLevel} Star</p>
-            </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center">
+          <div className="p-2 rounded-lg bg-yellow-500">
+            <Award className="h-5 w-5 text-white" />
+          </div>
+          <div className="ml-3">
+            <p className="text-xs sm:text-sm font-medium text-gray-600">Rate Level</p>
+            <p className="text-lg font-bold text-gray-900">{talent.rateLevel} Star</p>
           </div>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <input
@@ -212,27 +193,27 @@ const EarningsPage: React.FC = () => {
             placeholder="Search earnings by campaign..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        
-        <div className="flex items-center space-x-2">
-          <Filter className="h-5 w-5 text-gray-400" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Status</option>
-            <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex items-center space-x-2">
+            <Filter className="h-5 w-5 text-gray-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Status</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
           <select
             value={periodFilter}
             onChange={(e) => setPeriodFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Time</option>
             <option value="today">Today</option>
@@ -245,72 +226,72 @@ const EarningsPage: React.FC = () => {
 
       {/* Earnings List */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Earnings History</h3>
-          <p className="text-gray-600 text-sm">View all your completed jobs and earnings</p>
+        <div className="px-4 py-4 sm:p-6 border-b border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Earnings History</h3>
+          <p className="text-gray-600 text-xs sm:text-sm">View all your completed jobs and earnings</p>
         </div>
 
-        {filteredEarnings.length > 0 ? (
-          <div className="divide-y divide-gray-200">
-            {filteredEarnings.map((earning) => (
-              <div key={earning.id} className="p-6 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-3 rounded-full border ${
-                      earning.status === 'paid' ? 'bg-green-50 border-green-200' :
-                      earning.status === 'pending' ? 'bg-yellow-50 border-yellow-200' :
-                      'bg-red-50 border-red-200'
-                    }`}>
-                      {getStatusIcon(earning.status)}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{earning.campaignTitle}</h4>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          Earned: {earning.earnedAt.toLocaleDateString()}
-                        </div>
-                        {earning.paidAt && (
-                          <div className="flex items-center text-sm text-gray-500">
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Paid: {earning.paidAt.toLocaleDateString()}
-                          </div>
-                        )}
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Package className="h-4 w-4 mr-1" />
-                          Order #{earning.orderId}
-                        </div>
-                      </div>
-                    </div>
+{filteredEarnings.length > 0 ? (
+  <div className="divide-y divide-gray-200">
+    {filteredEarnings.map((earning) => (
+      <div key={earning.id} className="px-4 py-4 sm:p-6 hover:bg-gray-50 transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className={`p-3 rounded-full border flex-shrink-0 ${
+              earning.status === 'paid' ? 'bg-green-50 border-green-200' :
+              earning.status === 'pending' ? 'bg-yellow-50 border-yellow-200' :
+              'bg-red-50 border-red-200'
+            }`}>
+              {getStatusIcon(earning.status)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-gray-900 truncate">{earning.campaignTitle}</h4>
+              <div className="flex flex-wrap gap-2 mt-1 text-xs sm:text-sm text-gray-500">
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Earned: {new Date(earning.earnedAt).toLocaleDateString()}
+                </div>
+                {earning.paidAt && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Paid: {new Date(earning.paidAt).toLocaleDateString()}
                   </div>
-                  
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-green-600">
-                      {formatCurrency(earning.amount)}
-                    </p>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(earning.status)}`}>
-                      {getStatusIcon(earning.status)}
-                      <span className="ml-1 capitalize">{earning.status}</span>
-                    </span>
-                  </div>
+                )}
+                <div className="flex items-center">
+                  <Package className="h-4 w-4 mr-1" />
+                  Order #{earning.orderId}
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <div className="text-gray-500">
-              <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-medium mb-2">No earnings found</h3>
-              <p className="text-sm">
-                {searchTerm || statusFilter !== 'all' || periodFilter !== 'all'
-                  ? 'Try adjusting your search or filters' 
-                  : 'Your earnings will appear here when you complete jobs'
-                }
-              </p>
             </div>
           </div>
-        )}
+          <div className="text-right sm:text-right mt-2 sm:mt-0 flex flex-col items-end">
+            <p className="text-base sm:text-lg font-bold text-green-600">
+              {formatCurrency(earning.amount)}
+            </p>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${getStatusColor(earning.status)}`}>
+              {getStatusIcon(earning.status)}
+              <span className="ml-1 capitalize">{earning.status}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+) : (
+  <div className="text-center py-12">
+    <div className="text-gray-500">
+      <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+      <h3 className="text-lg font-medium mb-2">No earnings found</h3>
+      <p className="text-sm">
+        {searchTerm || statusFilter !== 'all' || periodFilter !== 'all'
+          ? 'Try adjusting your search or filters' 
+          : 'Your earnings will appear here when you complete jobs'
+        }
+      </p>
+    </div>
+  </div>
+)}
+
       </div>
     </div>
   );

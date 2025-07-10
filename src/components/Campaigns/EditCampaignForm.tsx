@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Upload, X, Save } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Upload, X, Save, Camera, Video, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Campaign } from '../../types';
+import { updateCampaign } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 
 interface EditCampaignFormProps {
   campaign: Campaign;
@@ -14,6 +16,7 @@ const EditCampaignForm: React.FC<EditCampaignFormProps> = ({ campaign, onClose, 
   const { user } = useAuth();
   const { campaigns, setCampaigns } = useApp();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: campaign.title,
     description: campaign.description,
@@ -24,6 +27,7 @@ const EditCampaignForm: React.FC<EditCampaignFormProps> = ({ campaign, onClose, 
     mediaType: campaign.mediaType,
   });
   const [productImages, setProductImages] = useState<string[]>(campaign.productImages);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const categories = [
     'Technology',
@@ -55,19 +59,100 @@ const EditCampaignForm: React.FC<EditCampaignFormProps> = ({ campaign, onClose, 
     }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      // Mock image upload - in real app, would upload to cloud storage
-      const newImages = Array.from(files).map((file, index) => 
-        `https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=400`
-      );
-      setProductImages(prev => [...prev, ...newImages]);
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error('User not authenticated');
+
+      const uploadedUrls = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        // Check file type
+        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+          console.warn(`${file.name} is not a valid image or video file.`);
+          continue;
+        }
+        
+        // Check file size (max 20MB)
+        if (file.size > 20 * 1024 * 1024) {
+          console.warn(`${file.name} is too large. Maximum size is 20MB.`);
+          continue;
+        }
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${authUser.id}/campaign-${campaign.id}-${Date.now()}-${i}.${fileExt}`;
+        
+        const { data, error } = await supabase.storage
+          .from('campaign-media')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+
+        if (error) {
+          console.error('Error uploading file:', error);
+          continue;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('campaign-media')
+          .getPublicUrl(data.path);
+
+        uploadedUrls.push(publicUrlData.publicUrl);
+      }
+
+      // Add new images to product images
+      setProductImages(prev => [...prev, ...uploadedUrls]);
+      
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      alert('Failed to upload some files. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
-  const removeImage = (index: number) => {
-    setProductImages(prev => prev.filter((_, i) => i !== index));
+  const removeImage = async (index: number) => {
+    try {
+      const imageUrl = productImages[index];
+      
+      // Extract file path from URL
+      const url = new URL(imageUrl);
+      const pathMatch = url.pathname.match(/\/campaign-media\/(.+)$/);
+      
+      if (pathMatch && pathMatch[1]) {
+        const filePath = decodeURIComponent(pathMatch[1]);
+        
+        // Delete from storage
+        const { error } = await supabase.storage
+          .from('campaign-media')
+          .remove([filePath]);
+          
+        if (error) {
+          console.error('Error removing file from storage:', error);
+        }
+      }
+      
+      // Remove from state
+      setProductImages(prev => prev.filter((_, i) => i !== index));
+    } catch (error) {
+      console.error('Error removing image:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,23 +161,46 @@ const EditCampaignForm: React.FC<EditCampaignFormProps> = ({ campaign, onClose, 
 
     setLoading(true);
 
-    const updatedCampaign: Campaign = {
-      ...campaign,
-      title: formData.title,
-      description: formData.description,
-      productName: formData.productName,
-      category: formData.category,
-      duration: formData.duration,
-      productImages: productImages.length > 0 ? productImages : ['https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=400'],
-      rateLevel: formData.rateLevel,
-      mediaType: formData.mediaType,
-    };
+    try {
+      const updatedCampaign: Campaign = {
+        ...campaign,
+        title: formData.title,
+        description: formData.description,
+        productName: formData.productName,
+        category: formData.category,
+        duration: formData.duration,
+        productImages: productImages,
+        rateLevel: formData.rateLevel,
+        mediaType: formData.mediaType,
+      };
 
-    // Update campaigns list
-    setCampaigns(campaigns.map(c => c.id === campaign.id ? updatedCampaign : c));
-    
-    setLoading(false);
-    onSuccess();
+      // Update campaign in database
+      await updateCampaign(campaign.id, {
+        title: formData.title,
+        description: formData.description,
+        product_name: formData.productName,
+        category: formData.category,
+        duration: formData.duration,
+        product_images: productImages,
+        rate_level: formData.rateLevel,
+        media_type: formData.mediaType,
+      });
+
+      // Update campaigns list
+      setCampaigns(campaigns.map(c => c.id === campaign.id ? updatedCampaign : c));
+      
+      onSuccess();
+    } catch (error) {
+      console.error('Error updating campaign:', error);
+      alert('Failed to update campaign. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isVideoUrl = (url: string) => {
+    return url.includes('.mp4') || url.includes('.mov') || url.includes('.webm') || 
+           url.includes('video') || url.endsWith('.mp4');
   };
 
   return (
@@ -237,7 +345,7 @@ const EditCampaignForm: React.FC<EditCampaignFormProps> = ({ campaign, onClose, 
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Product Images
+              Product Images & Videos
             </label>
             <div className="space-y-4">
               <div className="flex items-center justify-center w-full">
@@ -245,35 +353,59 @@ const EditCampaignForm: React.FC<EditCampaignFormProps> = ({ campaign, onClose, 
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <Upload className="w-8 h-8 mb-2 text-gray-400" />
                     <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">Click to upload</span> product images
+                      <span className="font-semibold">Click to upload</span> product media
                     </p>
-                    <p className="text-xs text-gray-500">PNG, JPG or JPEG (MAX. 5MB each)</p>
+                    <p className="text-xs text-gray-500">Images & Videos (MAX. 20MB each)</p>
                   </div>
                   <input
                     type="file"
                     className="hidden"
                     multiple
-                    accept="image/*"
+                    accept="image/*,video/*"
                     onChange={handleImageUpload}
+                    ref={fileInputRef}
+                    disabled={uploading}
                   />
                 </label>
               </div>
 
+              {uploading && (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-sm text-gray-600">Uploading media...</p>
+                </div>
+              )}
+
               {productImages.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {productImages.map((image, index) => (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {productImages.map((item, index) => (
                     <div key={index} className="relative group">
-                      <img
-                        src={image}
-                        alt={`Product ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                      />
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                        {isVideoUrl(item) ? (
+                          <div className="relative w-full h-full">
+                            <video
+                              src={item}
+                              className="w-full h-full object-cover"
+                              controls
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Video className="h-8 w-8 text-white drop-shadow-lg" />
+                            </div>
+                          </div>
+                        ) : (
+                          <img
+                            src={item}
+                            alt={`Product ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <X className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   ))}
@@ -292,7 +424,7 @@ const EditCampaignForm: React.FC<EditCampaignFormProps> = ({ campaign, onClose, 
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="px-6 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               <Save className="h-4 w-4" />

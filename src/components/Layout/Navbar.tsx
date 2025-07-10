@@ -1,17 +1,27 @@
 import React, { useState } from 'react';
-import { User, LogOut, Menu, X, Wallet, Settings } from 'lucide-react';
+import { User, LogOut, Menu, X, Wallet, Settings, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Founder, Talent } from '../../types';
+import NotificationsList from './NotificationsList';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
-  const { earnings } = useApp();
+  const { earnings, notifications } = useApp();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleLogout = () => {
     logout();
     setIsMenuOpen(false);
+  };
+  
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
+    // Close menu if open
+    if (isMenuOpen) {
+      setIsMenuOpen(false);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -32,14 +42,17 @@ const Navbar: React.FC = () => {
   const talentTotalEarnings = isTalent 
     ? earnings.filter(e => e.talentId === user.id && e.status === 'paid').reduce((sum, e) => sum + e.amount, 0)
     : 0;
+    
+  // Count unread notifications
+  const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <nav className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 shadow-md border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-14 md:h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 GambarKaca
               </h1>
             </div>
@@ -47,9 +60,28 @@ const Navbar: React.FC = () => {
 
           <div className="hidden md:block">
             <div className="ml-4 flex items-center md:ml-6 space-x-4">
+              {/* Notifications Bell */}
+              <div className="relative">
+                <button
+                  onClick={toggleNotifications}
+                  className="p-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-lg transition-colors relative"
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                      {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                    </span>
+                  )}
+                </button>
+                
+                {showNotifications && (
+                  <NotificationsList onClose={() => setShowNotifications(false)} />
+                )}
+              </div>
+              
               {/* Wallet Balance for Founders */}
               {isFounder && founderUser.walletBalance !== undefined && (
-                <div className="flex items-center space-x-2 bg-gradient-to-r from-green-50 to-blue-50 px-3 py-2 rounded-lg border border-green-200">
+                <div className="hidden md:flex items-center space-x-2 bg-gradient-to-r from-green-50 to-blue-50 px-3 py-2 rounded-lg border border-green-200">
                   <Wallet className="h-4 w-4 text-green-600" />
                   <span className="text-sm font-semibold text-green-700">
                     {formatCurrency(founderUser.walletBalance)}
@@ -59,7 +91,7 @@ const Navbar: React.FC = () => {
 
               {/* Total Earnings for Talents */}
               {isTalent && (
-                <div className="flex items-center space-x-2 bg-gradient-to-r from-purple-50 to-blue-50 px-3 py-2 rounded-lg border border-purple-200">
+                <div className="hidden md:flex items-center space-x-2 bg-gradient-to-r from-purple-50 to-blue-50 px-3 py-2 rounded-lg border border-purple-200">
                   <Wallet className="h-4 w-4 text-purple-600" />
                   <span className="text-sm font-semibold text-purple-700">
                     {formatCurrency(talentTotalEarnings)}
@@ -72,8 +104,18 @@ const Navbar: React.FC = () => {
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
                   className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-lg px-3 py-2 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                    {user?.name.charAt(0).toUpperCase()}
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                    {user?.avatar ? (
+                      <img 
+                        src={user.avatar} 
+                        alt={user.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        {user?.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </div>
                   <div className="text-left">
                     <span className="text-sm font-medium block">{user?.name}</span>
@@ -89,8 +131,18 @@ const Navbar: React.FC = () => {
                       {/* Profile Header */}
                       <div className="px-4 py-3 border-b border-gray-100">
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                            {user?.name.charAt(0).toUpperCase()}
+                          <div className="w-10 h-10 rounded-full overflow-hidden">
+                            {user?.avatar ? (
+                              <img 
+                                src={user.avatar} 
+                                alt={user.name} 
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                                {user?.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-900">{user?.name}</p>
@@ -156,22 +208,50 @@ const Navbar: React.FC = () => {
 
           <div className="md:hidden">
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={() => {
+                setIsMenuOpen(!isMenuOpen);
+                if (showNotifications) setShowNotifications(false);
+              }}
               className="text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-lg p-2"
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
+          
+          {/* Mobile Notifications Bell */}
+          <div className="md:hidden mr-2">
+            <button
+              onClick={toggleNotifications}
+              className="p-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-lg transition-colors relative"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+          <div className="md:hidden border-t border-gray-100">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white bg-opacity-50 backdrop-blur-sm rounded-lg my-2">
               {/* Profile Info */}
-              <div className="flex items-center space-x-3 px-3 py-3 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                  {user?.name.charAt(0).toUpperCase()}
+              <div className="flex items-center space-x-3 px-3 py-3 bg-white bg-opacity-70 rounded-lg">
+                <div className="w-10 h-10 rounded-full overflow-hidden">
+                  {user?.avatar ? (
+                    <img 
+                      src={user.avatar} 
+                      alt={user.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                      {user?.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">{user?.name}</p>
@@ -234,6 +314,13 @@ const Navbar: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* Mobile Notifications Panel */}
+      {showNotifications && (
+        <div className="md:hidden">
+          <NotificationsList onClose={() => setShowNotifications(false)} />
+        </div>
+      )}
     </nav>
   );
 };

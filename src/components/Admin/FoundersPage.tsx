@@ -1,95 +1,17 @@
 import React, { useState } from 'react';
 import { Users, Search, Filter, Eye, Ban, CheckCircle, Building, Mail, Phone, Wallet, Calendar, MoreVertical } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { updateUserStatus } from '../../lib/api';
 import FounderDetailsModal from './FounderDetailsModal';
-
-interface Founder {
-  id: string;
-  email: string;
-  name: string;
-  role: 'founder';
-  status: 'active' | 'pending' | 'suspended';
-  company?: string;
-  phone?: string;
-  address?: string;
-  walletBalance: number;
-  totalCampaigns: number;
-  totalSpent: number;
-  createdAt: Date;
-  lastLogin?: Date;
-}
+import { Founder } from '../../types';
 
 const FoundersPage: React.FC = () => {
-  const { campaigns } = useApp();
+  const { founders, setFounders, campaigns, refreshData } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedFounder, setSelectedFounder] = useState<Founder | null>(null);
-
-  // Mock founders data - in real app, this would come from API
-  const mockFounders: Founder[] = [
-    {
-      id: '2',
-      email: 'founder@example.com',
-      name: 'John Founder',
-      role: 'founder',
-      status: 'active',
-      company: 'Tech Startup Inc',
-      phone: '+1234567890',
-      address: '123 Business St, San Francisco, CA',
-      walletBalance: 5000,
-      totalCampaigns: 4,
-      totalSpent: 2800,
-      createdAt: new Date('2023-06-15'),
-      lastLogin: new Date('2024-01-25'),
-    },
-    {
-      id: '6',
-      email: 'sarah.brand@example.com',
-      name: 'Sarah Wilson',
-      role: 'founder',
-      status: 'active',
-      company: 'Fashion Brand Co',
-      phone: '+1987654321',
-      address: '456 Fashion Ave, New York, NY',
-      walletBalance: 3200,
-      totalCampaigns: 2,
-      totalSpent: 1500,
-      createdAt: new Date('2023-08-20'),
-      lastLogin: new Date('2024-01-24'),
-    },
-    {
-      id: '7',
-      email: 'mike.startup@example.com',
-      name: 'Mike Chen',
-      role: 'founder',
-      status: 'pending',
-      company: 'Organic Foods Ltd',
-      phone: '+1555123456',
-      address: '789 Health St, Austin, TX',
-      walletBalance: 1000,
-      totalCampaigns: 0,
-      totalSpent: 0,
-      createdAt: new Date('2024-01-20'),
-    },
-    {
-      id: '8',
-      email: 'lisa.corp@example.com',
-      name: 'Lisa Rodriguez',
-      role: 'founder',
-      status: 'suspended',
-      company: 'Gaming Corp',
-      phone: '+1444987654',
-      address: '321 Game St, Seattle, WA',
-      walletBalance: 500,
-      totalCampaigns: 1,
-      totalSpent: 800,
-      createdAt: new Date('2023-12-10'),
-      lastLogin: new Date('2024-01-15'),
-    },
-  ];
-
-  const [founders, setFounders] = useState<Founder[]>(mockFounders);
-
+  const [loading, setLoading] = useState(false);
+  const { transactions } = useApp();
   // Apply search and status filters
   const filteredFounders = founders.filter(founder => {
     const matchesSearch = founder.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -126,12 +48,24 @@ const FoundersPage: React.FC = () => {
     }
   };
 
-  const handleStatusChange = (founderId: string, newStatus: 'active' | 'suspended') => {
-    setFounders(founders.map(founder => 
-      founder.id === founderId 
-        ? { ...founder, status: newStatus }
-        : founder
-    ));
+  const handleStatusChange = async (founderId: string, newStatus: 'active' | 'suspended') => {
+    try {
+      setLoading(true);
+      await updateUserStatus(founderId, newStatus);
+      
+      // Update local state
+      setFounders(founders.map(founder => 
+        founder.id === founderId 
+          ? { ...founder, status: newStatus }
+          : founder
+      ));
+      
+      // Refresh data to ensure consistency
+    } catch (error) {
+      alert('Failed to update founder status. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -147,6 +81,17 @@ const FoundersPage: React.FC = () => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
+
+  // Calculate founder statistics
+  const getFounderCampaigns = (founderId: string) => {
+    return campaigns.filter(campaign => campaign.founderId === founderId);
+  };
+
+const getFounderTotalSpent = (founderId: string) => {
+  return transactions
+    .filter(tx => tx.userId === founderId && tx.type === 'debit')
+    .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+};
 
   return (
     <div className="space-y-6">
@@ -267,7 +212,7 @@ const FoundersPage: React.FC = () => {
                     Wallet Balance
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Login
+                    Joined
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -275,95 +220,112 @@ const FoundersPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredFounders.map((founder) => (
-                  <tr key={founder.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                          {founder.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{founder.name}</div>
-                          <div className="text-sm text-gray-500 flex items-center">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {founder.email}
+                {filteredFounders.map((founder) => {
+                  const founderCampaigns = getFounderCampaigns(founder.id);
+                  const totalSpent = getFounderTotalSpent(founder.id);
+                  
+                  return (
+                    <tr key={founder.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                                <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-md object-cover">
+                                {founder.avatar ? (
+                                  <img
+                                    src={founder.avatar}
+                                    alt={founder.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  founder.name.charAt(0).toUpperCase()
+                                )}
+                              </div>
+                          
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">{founder.name}</div>
+                            <div className="text-sm text-gray-500 flex items-center">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {founder.email}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{founder.company || 'N/A'}</div>
-                      {founder.phone && (
-                        <div className="text-sm text-gray-500 flex items-center">
-                          <Phone className="h-3 w-3 mr-1" />
-                          {founder.phone}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(founder.status)}`}>
-                        {getStatusIcon(founder.status)}
-                        <span className="ml-1 capitalize">{founder.status}</span>
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{founder.totalCampaigns}</div>
-                      <div className="text-sm text-gray-500">campaigns</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-green-600">{formatCurrency(founder.walletBalance)}</div>
-                      <div className="text-sm text-gray-500">Spent: {formatCurrency(founder.totalSpent)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {founder.lastLogin ? `${getDaysAgo(founder.lastLogin)} days ago` : 'Never'}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Joined {getDaysAgo(founder.createdAt)} days ago
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => setSelectedFounder(founder)}
-                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        
-                        {founder.status === 'active' ? (
-                          <button
-                            onClick={() => handleStatusChange(founder.id, 'suspended')}
-                            className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Suspend Account"
-                          >
-                            <Ban className="h-4 w-4" />
-                          </button>
-                        ) : founder.status === 'suspended' ? (
-                          <button
-                            onClick={() => handleStatusChange(founder.id, 'active')}
-                            className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Activate Account"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleStatusChange(founder.id, 'active')}
-                            className="px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                          >
-                            Approve
-                          </button>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{founder.company || 'N/A'}</div>
+                        {founder.phone && (
+                          <div className="text-sm text-gray-500 flex items-center">
+                            <Phone className="h-3 w-3 mr-1" />
+                            {founder.phone}
+                          </div>
                         )}
-                        
-                        <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors">
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(founder.status)}`}>
+                          {getStatusIcon(founder.status)}
+                          <span className="ml-1 capitalize">{founder.status}</span>
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{founderCampaigns.length}</div>
+                        <div className="text-sm text-gray-500">campaigns</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-green-600">{formatCurrency(founder.walletBalance)}</div>
+                        <div className="text-sm text-gray-500">Spent: {formatCurrency(totalSpent)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {getDaysAgo(founder.createdAt)} days ago
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {founder.createdAt.toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => setSelectedFounder(founder)}
+                            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          
+                          {founder.status === 'active' ? (
+                            <button
+                              onClick={() => handleStatusChange(founder.id, 'suspended')}
+                              disabled={loading}
+                              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                              title="Suspend Account"
+                            >
+                              <Ban className="h-4 w-4" />
+                            </button>
+                          ) : founder.status === 'suspended' ? (
+                            <button
+                              onClick={() => handleStatusChange(founder.id, 'active')}
+                              disabled={loading}
+                              className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                              title="Activate Account"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleStatusChange(founder.id, 'active')}
+                              disabled={loading}
+                              className="px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          
+                          <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

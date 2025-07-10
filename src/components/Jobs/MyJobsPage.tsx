@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Search, Filter, Eye, Clock, Truck, MapPin, CheckCircle, Upload, Star, Calendar } from 'lucide-react';
+import { Package, Search, Filter, Eye, Clock, Truck, MapPin, CheckCircle, Upload, Star, Calendar, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Order } from '../../types';
@@ -18,10 +18,11 @@ const MyJobsPage: React.FC = () => {
   const talentJobs = orders.filter(order => order.talentId === user?.id);
 
   // Get campaigns where talent is approved but no order exists yet
-  const approvedCampaigns = campaigns.filter(campaign => 
-    campaign.approvedTalents.includes(user?.id || '') &&
-    !talentJobs.some(job => job.campaignId === campaign.id)
-  );
+  const approvedCampaigns = campaigns.filter(
+  campaign =>
+    campaign.applicants.includes(user?.id || '') &&
+    !campaign.approvedTalents.includes(user?.id || '')
+);
 
   // Apply search and status filters
   const filteredJobs = talentJobs.filter(job => {
@@ -304,7 +305,6 @@ const MyJobsPage: React.FC = () => {
       {/* Active Jobs List */}
       {filteredJobs.length > 0 ? (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Active Orders</h3>
           {filteredJobs.map((job) => (
             <div key={job.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-start justify-between">
@@ -330,46 +330,68 @@ const MyJobsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Delivery Information */}
-                  {job.deliveryInfo && job.status !== 'pending_shipment' && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <h4 className="text-sm font-medium text-blue-800 mb-2">Delivery Information:</h4>
-                      <div className="space-y-1 text-sm text-blue-700">
-                        {job.deliveryInfo.trackingNumber && (
-                          <p><span className="font-medium">Tracking:</span> {job.deliveryInfo.trackingNumber}</p>
-                        )}
+                  {/* Tracking Information */}
+                  {job.status === 'shipped' && job.deliveryInfo && job.deliveryInfo.trackingNumber && (
+                    <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                      <h4 className="font-medium text-blue-900 mb-2">Tracking Information</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-blue-700">Tracking Number:</span>
+                          <span className="ml-2 font-mono">{job.deliveryInfo.trackingNumber}</span>
+                        </div>
                         {job.deliveryInfo.courier && (
-                          <p><span className="font-medium">Courier:</span> {job.deliveryInfo.courier}</p>
-                        )}
-                        {job.deliveryInfo.address && (
-                          <p><span className="font-medium">Delivery Address:</span> {job.deliveryInfo.address}</p>
+                          <div>
+                            <span className="text-blue-700">Courier:</span>
+                            <span className="ml-2">{job.deliveryInfo.courier}</span>
+                          </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {/* Review Submission Status */}
-                  {job.reviewSubmission && (
-                    <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                      <h4 className="text-sm font-medium text-green-800 mb-2">Review Submitted:</h4>
-                      <p className="text-sm text-green-700">
-                        Submitted on {job.reviewSubmission.submittedAt.toLocaleDateString()}
+                  {/* Review Submission */}
+                  {job.status === 'delivered' && (
+                    <div className="bg-purple-50 rounded-lg p-4 mb-4">
+                      <h4 className="font-medium text-purple-900 mb-2">Ready for Review</h4>
+                      <p className="text-sm text-purple-700 mb-3">
+                        Your product has been delivered! You can now create and submit your review content.
                       </p>
-                      <div className="mt-2">
-                        {job.reviewSubmission.mediaType === 'image' ? (
-                          <img
-                            src={job.reviewSubmission.mediaUrl}
-                            alt="Review submission"
-                            className="w-24 h-24 object-cover rounded-lg border border-green-200"
-                          />
-                        ) : (
-                          <video
-                            src={job.reviewSubmission.mediaUrl}
-                            className="w-24 h-24 rounded-lg border border-green-200"
-                            controls
-                          />
-                        )}
+                      {canSubmitReview(job) ? (
+                        <button
+                          onClick={() => handleSubmitReview(job)}
+                          className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Submit Review
+                        </button>
+                      ) : (
+                        <div className="text-sm text-purple-600">
+                          ✓ Review already submitted
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Review Submitted Status */}
+                  {job.status === 'review_submitted' && job.reviewSubmission && (
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <h4 className="font-medium text-green-900 mb-2">Review Submitted</h4>
+                      <p className="text-sm text-green-700 mb-2">
+                        Your review was submitted on {new Date(job.reviewSubmission.submittedAt).toLocaleDateString()}
+                      </p>
+                      <div className="text-sm text-green-600">
+                        Status: Under review by the founder
                       </div>
+                    </div>
+                  )}
+
+                  {/* Completed Status */}
+                  {job.status === 'completed' && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-2">Job Completed</h4>
+                      <p className="text-sm text-gray-700">
+                        This job has been completed successfully. Payment has been processed and added to your earnings.
+                      </p>
                     </div>
                   )}
                 </div>

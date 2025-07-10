@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Mail, Calendar, DollarSign, CheckCircle, Ban, Star, Award, Instagram, Youtube, Camera, Video } from 'lucide-react';
+import { X, Mail, Calendar, DollarSign, CheckCircle, Ban, Star, Award, Instagram, Youtube, Camera, Video, Play, ExternalLink } from 'lucide-react';
 
 interface Talent {
   id: string;
@@ -7,6 +7,7 @@ interface Talent {
   name: string;
   role: 'talent';
   status: 'active' | 'pending' | 'suspended';
+  avatar?: string;
   bio?: string;
   portfolio: string[];
   rateLevel: 1 | 2 | 3;
@@ -72,6 +73,11 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
     onClose();
   };
 
+  const isVideoUrl = (url: string) => {
+    return url.includes('.mp4') || url.includes('.mov') || url.includes('.webm') || 
+           url.includes('video') || url.endsWith('.mp4');
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -88,8 +94,18 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
         <div className="p-6 space-y-6">
           {/* Header Section */}
           <div className="flex items-start space-x-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-              {talent.name.charAt(0).toUpperCase()}
+            <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0">
+              {talent.avatar ? (
+                <img 
+                  src={talent.avatar} 
+                  alt={talent.name} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
+                  {talent.name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
             <div className="flex-1">
               <h3 className="text-xl font-bold text-gray-900">{talent.name}</h3>
@@ -112,7 +128,7 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
           {talent.bio && (
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-2">About</h4>
-              <p className="text-gray-700 leading-relaxed">{talent.bio}</p>
+              <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg">{talent.bio}</p>
             </div>
           )}
 
@@ -184,7 +200,7 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
           )}
 
           {/* Social Media Section */}
-          {talent.socialMedia && (
+          {talent.socialMedia && (Object.values(talent.socialMedia).some(val => val)) && (
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-3">Social Media</h4>
               <div className="space-y-2">
@@ -195,16 +211,25 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
                       href={`https://instagram.com/${talent.socialMedia.instagram.replace('@', '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 transition-colors"
+                      className="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
                     >
                       {talent.socialMedia.instagram}
+                      <ExternalLink className="h-3 w-3 ml-1" />
                     </a>
                   </div>
                 )}
                 {talent.socialMedia.youtube && (
                   <div className="flex items-center space-x-3">
                     <Youtube className="h-5 w-5 text-red-500" />
-                    <span className="text-gray-700">{talent.socialMedia.youtube}</span>
+                    <a
+                      href={talent.socialMedia.youtube.startsWith('http') ? talent.socialMedia.youtube : `https://youtube.com/${talent.socialMedia.youtube}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
+                    >
+                      {talent.socialMedia.youtube}
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </a>
                   </div>
                 )}
               </div>
@@ -218,16 +243,31 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {talent.portfolio.map((item, index) => (
                   <div key={index} className="relative group">
-                    <img
-                      src={item}
-                      alt={`Portfolio ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Camera className="h-6 w-6 text-white" />
+                    {isVideoUrl(item) ? (
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
+                        <video
+                          src={item}
+                          className="w-full h-full object-cover"
+                          controls
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Play className="h-10 w-10 text-white" />
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                        <img
+                          src={item}
+                          alt={`Portfolio ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="h-6 w-6 text-white" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

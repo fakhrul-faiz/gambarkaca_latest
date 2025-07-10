@@ -125,57 +125,57 @@ const AdminCampaignsPage: React.FC = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-6">
           <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-green-500">
-              <CheckCircle className="h-6 w-6 text-white" />
+            <div className="p-2 md:p-3 rounded-lg bg-green-500">
+              <CheckCircle className="h-4 w-4 md:h-6 md:w-6 text-white" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Campaigns</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="ml-2 md:ml-4">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Active Campaigns</p>
+              <p className="text-lg md:text-2xl font-bold text-gray-900">
                 {campaigns.filter(c => c.status === 'active').length}
               </p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-6">
           <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-yellow-500">
-              <Calendar className="h-6 w-6 text-white" />
+            <div className="p-2 md:p-3 rounded-lg bg-yellow-500">
+              <Calendar className="h-4 w-4 md:h-6 md:w-6 text-white" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Paused</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="ml-2 md:ml-4">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Paused</p>
+              <p className="text-lg md:text-2xl font-bold text-gray-900">
                 {campaigns.filter(c => c.status === 'paused').length}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-6">
           <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-blue-500">
-              <Users className="h-6 w-6 text-white" />
+            <div className="p-2 md:p-3 rounded-lg bg-blue-500">
+              <Users className="h-4 w-4 md:h-6 md:w-6 text-white" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Applicants</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="ml-2 md:ml-4">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Total Applicants</p>
+              <p className="text-lg md:text-2xl font-bold text-gray-900">
                 {campaigns.reduce((total, campaign) => total + campaign.applicants.length, 0)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-6">
           <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-purple-500">
-              <DollarSign className="h-6 w-6 text-white" />
+            <div className="p-2 md:p-3 rounded-lg bg-purple-500">
+              <DollarSign className="h-4 w-4 md:h-6 md:w-6 text-white" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Budget</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="ml-2 md:ml-4">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Total Budget</p>
+              <p className="text-lg md:text-2xl font-bold text-gray-900">
                 {formatCurrency(campaigns.reduce((total, campaign) => total + campaign.budget, 0))}
               </p>
             </div>
@@ -184,7 +184,7 @@ const AdminCampaignsPage: React.FC = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <input
@@ -192,16 +192,16 @@ const AdminCampaignsPage: React.FC = () => {
             placeholder="Search campaigns by title, product, or category..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           />
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 md:space-x-2">
           <Filter className="h-5 w-5 text-gray-400" />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -214,7 +214,7 @@ const AdminCampaignsPage: React.FC = () => {
           <select
             value={rateLevelFilter}
             onChange={(e) => setRateLevelFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           >
             <option value="all">All Levels</option>
             <option value="1">1 Star</option>
@@ -225,9 +225,9 @@ const AdminCampaignsPage: React.FC = () => {
       </div>
 
       {/* Campaigns List */}
-      {filteredCampaigns.length > 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          {filteredCampaigns.length > 0 ? (
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -339,22 +339,20 @@ const AdminCampaignsPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          ) : (
+            <div className="text-center py-8 md:py-12">
+              <Megaphone className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 text-gray-300" />
+              <h3 className="text-base md:text-lg font-medium mb-1 md:mb-2">No campaigns found</h3>
+              <p className="text-xs md:text-sm text-gray-500">
+                {searchTerm || statusFilter !== 'all' || rateLevelFilter !== 'all'
+                  ? 'Try adjusting your search or filters' 
+                  : 'No campaigns have been created yet'
+                }
+              </p>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-gray-500">
-            <Megaphone className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-lg font-medium mb-2">No campaigns found</h3>
-            <p className="text-sm">
-              {searchTerm || statusFilter !== 'all' || rateLevelFilter !== 'all'
-                ? 'Try adjusting your search or filters' 
-                : 'No campaigns have been created yet'
-              }
-            </p>
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* Campaign Details Modal */}
       {selectedCampaign && (

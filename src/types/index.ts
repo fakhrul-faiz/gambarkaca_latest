@@ -41,7 +41,7 @@ export interface Campaign {
   mediaType: 'image' | 'video' | 'both';
   budget: number;
   price: number; // Calculated price based on rate level and duration
-  status: 'draft' | 'active' | 'paused' | 'completed';
+  status: 'draft' | 'active' | 'paused' | 'completed' | 'rejected';
   applicants: string[];
   approvedTalents: string[];
   createdAt: Date;
@@ -60,12 +60,13 @@ export interface Job {
     courier?: string;
   };
   reviewSubmission?: {
-    mediaUrl: string;
-    mediaType: 'image' | 'video';
+    media: { url: string; type: 'image' | 'video' }[];
     submittedAt: Date;
   };
   payout: number;
   createdAt: Date;
+  trackingNumber?: string;
+  courier?: string;
 }
 
 export interface Order {
@@ -78,6 +79,7 @@ export interface Order {
   productName: string;
   status: 'pending_shipment' | 'shipped' | 'delivered' | 'review_submitted' | 'completed';
   payout: number;
+  updatedAt?: Date;
   createdAt: Date;
   deliveryInfo?: {
     address: string;
@@ -85,10 +87,11 @@ export interface Order {
     courier?: string;
   };
   reviewSubmission?: {
-    mediaUrl: string;
-    mediaType: 'image' | 'video';
+    media: { url: string; type: 'image' | 'video' }[];
     submittedAt: Date;
   };
+  trackingNumber?: string;
+  courier?: string;
 }
 
 export interface Message {
@@ -119,6 +122,19 @@ export interface Earning {
   status: 'pending' | 'paid' | 'cancelled';
   earnedAt: Date;
   paidAt?: Date;
+  founderName: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'campaign_status' | 'order_status' | 'profile_status' | 'payment' | 'application';
+  relatedEntityId?: string;
+  relatedEntityType?: string;
+  isRead: boolean;
+  createdAt: Date;
 }
 
 // Updated pricing configuration with your exact prices

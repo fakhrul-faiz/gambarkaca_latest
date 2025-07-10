@@ -1,146 +1,19 @@
-import React, { useState } from 'react';
-import { Star, Search, Filter, Eye, Ban, CheckCircle, Mail, Calendar, DollarSign, MoreVertical, Award, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Star, Search, Filter, Eye, Ban, CheckCircle, Mail, Calendar, DollarSign, MoreVertical, Award, Users, RefreshCw, Settings } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+import { updateUserStatus, updateProfile } from '../../lib/api';
 import TalentDetailsModal from './TalentDetailsModal';
-
-interface Talent {
-  id: string;
-  email: string;
-  name: string;
-  role: 'talent';
-  status: 'active' | 'pending' | 'suspended';
-  bio?: string;
-  portfolio: string[];
-  rateLevel: 1 | 2 | 3;
-  skills: string[];
-  socialMedia?: {
-    instagram?: string;
-    tiktok?: string;
-    youtube?: string;
-  };
-  totalEarnings: number;
-  completedJobs: number;
-  averageRating: number;
-  createdAt: Date;
-  lastLogin?: Date;
-}
+import TalentApprovalModal from './TalentApprovalModal';
+import { Talent } from '../../types';
 
 const TalentsPage: React.FC = () => {
+  const { talents, setTalents, refreshData, loading } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [rateLevelFilter, setRateLevelFilter] = useState<string>('all');
   const [selectedTalent, setSelectedTalent] = useState<Talent | null>(null);
-
-  // Mock talents data - in real app, this would come from API
-  const mockTalents: Talent[] = [
-    {
-      id: '3',
-      email: 'talent@example.com',
-      name: 'Jane Talent',
-      role: 'talent',
-      status: 'active',
-      bio: 'Content creator with 100k followers specializing in tech reviews and lifestyle content.',
-      portfolio: [
-        'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=400',
-        'https://images.pexels.com/photos/4158/apple-iphone-smartphone-desk.jpg?auto=compress&cs=tinysrgb&w=400'
-      ],
-      rateLevel: 2,
-      skills: ['Photography', 'Video Creation', 'Tech Reviews', 'Social Media'],
-      socialMedia: {
-        instagram: '@jane_talent',
-        youtube: 'Jane Talent Channel',
-      },
-      totalEarnings: 2500,
-      completedJobs: 15,
-      averageRating: 4.8,
-      createdAt: new Date('2023-06-15'),
-      lastLogin: new Date('2024-01-25'),
-    },
-    {
-      id: '4',
-      email: 'sarah.creator@example.com',
-      name: 'Sarah Johnson',
-      role: 'talent',
-      status: 'active',
-      bio: 'Fashion and beauty content creator with expertise in lifestyle photography.',
-      portfolio: [
-        'https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg?auto=compress&cs=tinysrgb&w=400'
-      ],
-      rateLevel: 1,
-      skills: ['Fashion Photography', 'Beauty Content', 'Lifestyle', 'Instagram Marketing'],
-      socialMedia: {
-        instagram: '@sarah_creates',
-      },
-      totalEarnings: 1200,
-      completedJobs: 8,
-      averageRating: 4.6,
-      createdAt: new Date('2023-08-20'),
-      lastLogin: new Date('2024-01-24'),
-    },
-    {
-      id: '5',
-      email: 'mike.gamer@example.com',
-      name: 'Mike Chen',
-      role: 'talent',
-      status: 'active',
-      bio: 'Gaming content creator and tech enthusiast specializing in gaming gear reviews.',
-      portfolio: [
-        'https://images.pexels.com/photos/3945683/pexels-photo-3945683.jpeg?auto=compress&cs=tinysrgb&w=400'
-      ],
-      rateLevel: 3,
-      skills: ['Gaming Content', 'Tech Reviews', 'Video Editing', 'Streaming'],
-      socialMedia: {
-        youtube: 'Mike Gaming Channel',
-        instagram: '@mike_games',
-      },
-      totalEarnings: 4500,
-      completedJobs: 25,
-      averageRating: 4.9,
-      createdAt: new Date('2023-03-10'),
-      lastLogin: new Date('2024-01-23'),
-    },
-    {
-      id: '9',
-      email: 'alex.fitness@example.com',
-      name: 'Alex Rodriguez',
-      role: 'talent',
-      status: 'pending',
-      bio: 'Fitness influencer and health coach creating motivational content.',
-      portfolio: [
-        'https://images.pexels.com/photos/416778/pexels-photo-416778.jpeg?auto=compress&cs=tinysrgb&w=400'
-      ],
-      rateLevel: 1,
-      skills: ['Fitness Content', 'Health Coaching', 'Motivation', 'Workout Videos'],
-      socialMedia: {
-        instagram: '@alex_fitness',
-      },
-      totalEarnings: 0,
-      completedJobs: 0,
-      averageRating: 0,
-      createdAt: new Date('2024-01-20'),
-    },
-    {
-      id: '10',
-      email: 'emma.food@example.com',
-      name: 'Emma Wilson',
-      role: 'talent',
-      status: 'suspended',
-      bio: 'Food blogger and recipe creator with a passion for healthy cooking.',
-      portfolio: [],
-      rateLevel: 2,
-      skills: ['Food Photography', 'Recipe Creation', 'Cooking Videos', 'Nutrition'],
-      socialMedia: {
-        instagram: '@emma_eats',
-        youtube: 'Emma\'s Kitchen',
-      },
-      totalEarnings: 800,
-      completedJobs: 5,
-      averageRating: 4.2,
-      createdAt: new Date('2023-11-15'),
-      lastLogin: new Date('2024-01-10'),
-    },
-  ];
-
-  const [talents, setTalents] = useState<Talent[]>(mockTalents);
+  const [approvingTalent, setApprovingTalent] = useState<Talent | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Apply search and filters
   const filteredTalents = talents.filter(talent => {
@@ -192,12 +65,64 @@ const TalentsPage: React.FC = () => {
     }
   };
 
-  const handleStatusChange = (talentId: string, newStatus: 'active' | 'suspended') => {
-    setTalents(talents.map(talent => 
-      talent.id === talentId 
-        ? { ...talent, status: newStatus }
-        : talent
-    ));
+  const handleStatusChange = async (talentId: string, newStatus: 'active' | 'suspended') => {
+    try {
+      setActionLoading(true);
+      console.log('Updating talent status:', talentId, 'to:', newStatus);
+      
+      await updateUserStatus(talentId, newStatus);
+      
+      // Update local state
+      setTalents(talents.map(talent => 
+        talent.id === talentId 
+          ? { ...talent, status: newStatus }
+          : talent
+      ));
+      
+      // Refresh data to ensure consistency
+      await refreshData();
+      
+      console.log('Talent status updated successfully');
+    } catch (error) {
+      console.error('Error updating talent status:', error);
+      alert('Failed to update talent status. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApproveTalent = (talent: Talent) => {
+    setApprovingTalent(talent);
+  };
+
+  const handleApprovalSuccess = async (talentId: string, rateLevel: 1 | 2 | 3) => {
+    try {
+      setActionLoading(true);
+      
+      // Update talent status to active and set rate level
+      await updateUserStatus(talentId, 'active');
+      await updateProfile(talentId, { rate_level: rateLevel });
+      
+      // Update local state
+      setTalents(talents.map(talent => 
+        talent.id === talentId 
+          ? { ...talent, status: 'active', rateLevel }
+          : talent
+      ));
+      
+      setApprovingTalent(null);
+      await refreshData();
+    } catch (error) {
+      console.error('Error approving talent:', error);
+      alert('Failed to approve talent. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRefreshData = async () => {
+    console.log('Manually refreshing talent data...');
+    await refreshData();
   };
 
   const formatCurrency = (amount: number) => {
@@ -214,6 +139,15 @@ const TalentsPage: React.FC = () => {
     return diffDays;
   };
 
+  // Calculate average rating for talents
+  const getAverageRating = () => {
+    const activeTalents = talents.filter(t => t.status === 'active');
+    if (activeTalents.length === 0) return 0;
+    
+    // Mock average rating calculation - in real app this would come from reviews
+    return 4.7;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -221,6 +155,14 @@ const TalentsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Talents Management</h1>
           <p className="text-gray-600">Manage talent accounts and monitor their performance</p>
         </div>
+        <button
+          onClick={handleRefreshData}
+          disabled={loading}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh</span>
+        </button>
       </div>
 
       {/* Stats Overview */}
@@ -275,8 +217,7 @@ const TalentsPage: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Avg Rating</p>
               <p className="text-2xl font-bold text-gray-900">
-                {(talents.filter(t => t.averageRating > 0).reduce((sum, t) => sum + t.averageRating, 0) / 
-                  talents.filter(t => t.averageRating > 0).length || 0).toFixed(1)}
+                {getAverageRating().toFixed(1)}
               </p>
             </div>
           </div>
@@ -322,8 +263,16 @@ const TalentsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading talents...</p>
+        </div>
+      )}
+
       {/* Talents List */}
-      {filteredTalents.length > 0 ? (
+      {!loading && filteredTalents.length > 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -339,13 +288,13 @@ const TalentsPage: React.FC = () => {
                     Rate Level
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Performance
+                    Skills
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Earnings
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Login
+                    Joined
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -357,9 +306,18 @@ const TalentsPage: React.FC = () => {
                   <tr key={talent.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                          {talent.name.charAt(0).toUpperCase()}
+                        <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
+                          {talent.avatar ? (
+                            <img
+                              src={talent.avatar}
+                              alt={talent.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            talent.name.charAt(0).toUpperCase()
+                          )}
                         </div>
+
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{talent.name}</div>
                           <div className="text-sm text-gray-500 flex items-center">
@@ -382,24 +340,26 @@ const TalentsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{talent.completedJobs} jobs</div>
-                      <div className="text-sm text-gray-500 flex items-center">
-                        <Star className="h-3 w-3 mr-1 text-yellow-500" />
-                        {talent.averageRating > 0 ? talent.averageRating.toFixed(1) : 'N/A'}
+                      <div className="text-sm text-gray-900">
+                        {talent.skills.slice(0, 2).join(', ')}
+                        {talent.skills.length > 2 && ` +${talent.skills.length - 2}`}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {talent.skills.length} skill{talent.skills.length !== 1 ? 's' : ''}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-green-600">{formatCurrency(talent.totalEarnings)}</div>
                       <div className="text-sm text-gray-500">
-                        {talent.completedJobs > 0 ? `Avg: ${formatCurrency(talent.totalEarnings / talent.completedJobs)}` : 'No jobs'}
+                        Total earned
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {talent.lastLogin ? `${getDaysAgo(talent.lastLogin)} days ago` : 'Never'}
+                        {getDaysAgo(talent.createdAt)} days ago
                       </div>
                       <div className="text-sm text-gray-500">
-                        Joined {getDaysAgo(talent.createdAt)} days ago
+                        {talent.createdAt.toLocaleDateString()}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -412,28 +372,32 @@ const TalentsPage: React.FC = () => {
                           <Eye className="h-4 w-4" />
                         </button>
                         
-                        {talent.status === 'active' ? (
+                        {talent.status === 'pending' ? (
+                          <button
+                            onClick={() => handleApproveTalent(talent)}
+                            disabled={actionLoading}
+                            className="px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 flex items-center space-x-1"
+                          >
+                            <Settings className="h-3 w-3" />
+                            <span>{actionLoading ? 'Processing...' : 'Approve'}</span>
+                          </button>
+                        ) : talent.status === 'active' ? (
                           <button
                             onClick={() => handleStatusChange(talent.id, 'suspended')}
-                            className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            disabled={actionLoading}
+                            className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                             title="Suspend Account"
                           >
                             <Ban className="h-4 w-4" />
                           </button>
-                        ) : talent.status === 'suspended' ? (
-                          <button
-                            onClick={() => handleStatusChange(talent.id, 'active')}
-                            className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Activate Account"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </button>
                         ) : (
                           <button
                             onClick={() => handleStatusChange(talent.id, 'active')}
-                            className="px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                            disabled={actionLoading}
+                            className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                            title="Activate Account"
                           >
-                            Approve
+                            <CheckCircle className="h-4 w-4" />
                           </button>
                         )}
                         
@@ -448,20 +412,27 @@ const TalentsPage: React.FC = () => {
             </table>
           </div>
         </div>
-      ) : (
+      ) : !loading ? (
         <div className="text-center py-12">
           <div className="text-gray-500">
             <Star className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium mb-2">No talents found</h3>
-            <p className="text-sm">
+            <p className="text-sm mb-4">
               {searchTerm || statusFilter !== 'all' || rateLevelFilter !== 'all'
                 ? 'Try adjusting your search or filters' 
                 : 'No talents have registered yet'
               }
             </p>
+            <button
+              onClick={handleRefreshData}
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Refresh Data</span>
+            </button>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Talent Details Modal */}
       {selectedTalent && (
@@ -469,6 +440,15 @@ const TalentsPage: React.FC = () => {
           talent={selectedTalent}
           onClose={() => setSelectedTalent(null)}
           onStatusChange={handleStatusChange}
+        />
+      )}
+
+      {/* Talent Approval Modal */}
+      {approvingTalent && (
+        <TalentApprovalModal
+          talent={approvingTalent}
+          onClose={() => setApprovingTalent(null)}
+          onApprove={handleApprovalSuccess}
         />
       )}
     </div>

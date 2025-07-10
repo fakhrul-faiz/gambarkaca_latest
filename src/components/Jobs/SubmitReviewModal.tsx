@@ -1,6 +1,16 @@
-import React, { useState } from 'react';
-import { X, Upload, Camera, Video, FileText, AlertCircle } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Upload, Camera, VideoIcon, FileText, AlertCircle, Trash2 } from 'lucide-react';
 import { Order } from '../../types';
+import { supabase } from '../../lib/supabase';
+import { updateOrder } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
+
+interface MediaPreview {
+  file: File;
+  url: string;
+  type: 'image' | 'video';
+  previewLoading: boolean;
+}
 
 interface SubmitReviewModalProps {
   job: Order;
@@ -9,54 +19,116 @@ interface SubmitReviewModalProps {
 }
 
 const SubmitReviewModal: React.FC<SubmitReviewModalProps> = ({ job, onClose, onSuccess }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
-  const [mediaFile, setMediaFile] = useState<File | null>(null);
-  const [mediaPreview, setMediaPreview] = useState<string>('');
+  const [mediaFiles, setMediaFiles] = useState<MediaPreview[]>([]);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
 
+  // Helper: detect file type
+  const getFileTypeFromMime = (file: File) => {
+    if (file.type.startsWith('image')) return 'image';
+    if (file.type.startsWith('video')) return 'video';
+    return null;
+  };
+
+  // Add files (multi-select, image or video)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file size
-      const maxSize = mediaType === 'image' ? 10 * 1024 * 1024 : 50 * 1024 * 1024; // 10MB for images, 50MB for videos
+    setUploading(true);
+    try{
+    const files = Array.from(e.target.files || []);
+    let nextFiles = [...mediaFiles];
+
+    files.forEach(file => {
+      const fileType = getFileTypeFromMime(file);
+      if (!fileType) return;
+      const maxSize = fileType === 'image' ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
       if (file.size > maxSize) {
-        alert(`File size too large. Maximum size is ${mediaType === 'image' ? '10MB' : '50MB'}.`);
+        alert(`File ${file.name} too large. Max ${fileType === 'image' ? '10MB' : '50MB'}.`);
         return;
       }
+      // Prevent duplicates
+      if (nextFiles.some(mf => mf.file.name === file.name && mf.file.size === file.size)) return;
+      nextFiles.push({
+        file,
+        url: URL.createObjectURL(file),
+        type: fileType,
+        previewLoading: true,
+      });
+    });
 
-      setMediaFile(file);
-      const url = URL.createObjectURL(file);
-      setMediaPreview(url);
-    }
+    setMediaFiles(nextFiles);
+        } catch (error) {
+    console.error('Error processing files:', error);
+    alert('Failed to process files. Please try again.');
+  } finally {
+    setUploading(false);
+  }
+  };
+
+  // Remove a single file
+  const removeFile = (idx: number) => {
+    setMediaFiles(files => files.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mediaFile) return;
-
+    setError('');
+    if (!mediaFiles.length) {
+      setError('Please select at least one photo or video.');
+      return;
+    }
+    if (!user) {
+      setError('User not found. Please login again.');
+      return;
+    }
     setLoading(true);
 
-    // Simulate file upload and processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      const uploadedMedia: { url: string; type: 'image' | 'video' }[] = [];
+      for (const media of mediaFiles) {
+        const timestamp = Date.now();
+        const filePath = `${user.id}/${timestamp}_${media.file.name}`;
+        const { error: uploadError } = await supabase
+          .storage
+          .from('review-submissions')
+          .upload(filePath, media.file);
 
-    // Mock uploaded file URL
-    const mockUploadedUrl = mediaType === 'image' 
-      ? 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=400'
-      : 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4';
+        if (uploadError) {
+          setError(`Upload failed: ${media.file.name}: ${uploadError.message}`);
+          setLoading(false);
+          return;
+        }
+        const { data } = supabase.storage.from('review-submissions').getPublicUrl(filePath);
+        const publicUrl = data?.publicUrl;
+        if (!publicUrl) {
+          setError('Failed to retrieve file URL.');
+          setLoading(false);
+          return;
+        }
+        uploadedMedia.push({ url: publicUrl, type: media.type });
+      }
 
-    onSuccess(job.id, {
-      mediaUrl: mockUploadedUrl,
-      mediaType: mediaType,
-      notes: reviewNotes
-    });
+      // Save review with new media array format
+      await updateOrder(job.id, {
+        status: 'review_submitted',
+        review_media: uploadedMedia,
+        review_submitted_at: new Date().toISOString(),
+        notes: reviewNotes,
+      });
 
-    setLoading(false);
-  };
+      onSuccess(job.id, {
+        media: uploadedMedia,
+        notes: reviewNotes,
+      });
 
-  const removeFile = () => {
-    setMediaFile(null);
-    setMediaPreview('');
+      setLoading(false);
+      onClose();
+    } catch (err: any) {
+      setError('Unexpected error: ' + (err.message || err));
+      setLoading(false);
+    }
   };
 
   return (
@@ -73,144 +145,77 @@ const SubmitReviewModal: React.FC<SubmitReviewModalProps> = ({ job, onClose, onS
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Job Info */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
-            <h3 className="font-semibold text-blue-900 mb-2">{job.campaignTitle}</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-blue-700">Product: <span className="font-medium">{job.productName}</span></p>
-                <p className="text-blue-700">Payout: <span className="font-medium text-green-600">${job.payout}</span></p>
-              </div>
-              <div>
-                <p className="text-blue-700">Order ID: <span className="font-medium">#{job.id}</span></p>
-                <p className="text-blue-700">Status: <span className="font-medium">Product Delivered</span></p>
-              </div>
-            </div>
-          </div>
-
-          {/* Guidelines */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-yellow-800 mb-2">Review Guidelines</h4>
-                <ul className="text-sm text-yellow-700 space-y-1">
-                  <li>• Create authentic, engaging content showcasing the product</li>
-                  <li>• Ensure good lighting and clear audio (for videos)</li>
-                  <li>• Include key product features and benefits</li>
-                  <li>• Be honest and genuine in your review</li>
-                  <li>• Follow platform guidelines for content creation</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Media Type Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Content Type *
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setMediaType('image');
-                  removeFile();
-                }}
-                className={`p-4 border rounded-lg flex flex-col items-center space-y-2 transition-colors ${
-                  mediaType === 'image' 
-                    ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                <Camera className="h-8 w-8" />
-                <div className="text-center">
-                  <span className="text-sm font-medium">Photo Review</span>
-                  <p className="text-xs text-gray-500 mt-1">High-quality product photos</p>
-                </div>
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => {
-                  setMediaType('video');
-                  removeFile();
-                }}
-                className={`p-4 border rounded-lg flex flex-col items-center space-y-2 transition-colors ${
-                  mediaType === 'video' 
-                    ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                <Video className="h-8 w-8" />
-                <div className="text-center">
-                  <span className="text-sm font-medium">Video Review</span>
-                  <p className="text-xs text-gray-500 mt-1">Engaging video content</p>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* File Upload */}
+          {/* Media Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Upload {mediaType === 'image' ? 'Photo' : 'Video'} *
+              Upload Photos or Videos *
             </label>
-            
-            {!mediaFile ? (
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-10 h-10 mb-3 text-gray-400" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">Click to upload</span> your {mediaType}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {mediaType === 'image' 
-                        ? 'PNG, JPG or JPEG (MAX. 10MB)' 
-                        : 'MP4, MOV or AVI (MAX. 50MB)'
-                      }
-                    </p>
-                  </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept={mediaType === 'image' ? 'image/*' : 'video/*'}
-                    onChange={handleFileChange}
-                    required
-                  />
-                </label>
+            <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <Upload className="w-10 h-10 mb-3 text-gray-400" />
+
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+                <p className="mb-2 text-sm text-gray-500">
+                  <span className="font-semibold">Click to upload</span> or drag files
+                </p>
+                <p className="text-xs text-gray-500">
+                  Images: PNG, JPG, JPEG (max 10MB)<br />
+                  Videos: MP4, MOV, AVI (max 50MB)
+                </p>
               </div>
-            ) : (
-              <div className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-700">Selected File:</span>
-                  <button
-                    type="button"
-                    onClick={removeFile}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <p className="text-sm text-gray-600 mb-3">{mediaFile.name}</p>
-                
-                {/* File Preview */}
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  {mediaType === 'image' ? (
-                    <img
-                      src={mediaPreview}
-                      alt="Preview"
-                      className="w-full h-48 object-cover"
-                    />
-                  ) : (
-                    <video
-                      src={mediaPreview}
-                      controls
-                      className="w-full h-48"
-                    />
-                  )}
-                </div>
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*,video/*"
+                multiple
+                onChange={handleFileChange}
+                required={mediaFiles.length === 0}
+                disabled={uploading}
+              />
+            </label>
+            {/* Previews for all selected files */}
+            {mediaFiles.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                {mediaFiles.map((media, idx) => (
+                  <div key={idx} className="relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                    <button
+                      type="button"
+                      className="absolute top-1 right-1 bg-white rounded-full p-1 shadow text-red-600 hover:text-red-900"
+                      onClick={() => removeFile(idx)}
+                      title="Remove"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    {media.type === 'image' ? (
+                      <img
+                        src={media.url}
+                        alt={`Preview ${idx + 1}`}
+                        className="w-full h-32 object-cover"
+                        onLoad={() => {
+                          setMediaFiles(files =>
+                            files.map((f, i) => i === idx ? { ...f, previewLoading: false } : f)
+                          );
+                        }}
+                        style={{ opacity: media.previewLoading ? 0.5 : 1 }}
+                      />
+                    ) : (
+                      <video
+                        src={media.url}
+                        controls
+                        className="w-full h-32"
+                        onLoadedData={() => {
+                          setMediaFiles(files =>
+                            files.map((f, i) => i === idx ? { ...f, previewLoading: false } : f)
+                          );
+                        }}
+                        style={{ opacity: media.previewLoading ? 0.5 : 1 }}
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -235,20 +240,35 @@ const SubmitReviewModal: React.FC<SubmitReviewModalProps> = ({ job, onClose, onS
             </div>
           </div>
 
+          {error && (
+            <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded mb-2 text-sm flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading || !mediaFile}
+              disabled={loading || !mediaFiles.length}
               className="px-6 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
-              <Upload className="h-4 w-4" />
+              {loading ? (
+                <svg className="animate-spin h-5 w-5 text-white mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
               <span>{loading ? 'Submitting...' : 'Submit Review'}</span>
             </button>
           </div>
