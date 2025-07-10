@@ -75,7 +75,10 @@ const AnalyticsPage: React.FC = () => {
 
     worksheet.getRow(1).font = { bold: true };
     const buf = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buf]), `Campaign_Payment_Report_${Date.now()}.xlsx`);
+    saveAs(
+    new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+    `Campaign_Payment_Report_${Date.now()}.xlsx`
+  );
     setLoading(false);
   };
 
