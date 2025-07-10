@@ -164,8 +164,9 @@ const AnalyticsPage: React.FC = () => {
         />
         <button
           onClick={handleExportExcel}
-          disabled={loading || filteredOrders.length === 0}
-          className="ml-4 bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 text-white px-5 py-2 rounded-full shadow font-semibold hover:from-green-600 hover:to-purple-600 transition-all duration-200 flex items-center gap-2"
+          className={`ml-4 bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 text-white px-5 py-2 rounded-full shadow font-semibold hover:from-green-600 hover:to-purple-600 transition-all duration-200 flex items-center gap-2 ${
+            loading ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         >
           <Calendar className="h-5 w-5" />
           {loading ? 'Exporting...' : 'Export Excel'}
