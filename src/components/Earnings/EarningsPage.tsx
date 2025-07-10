@@ -3,7 +3,6 @@ import { DollarSign, Search, Filter, Calendar, TrendingUp, Award, Package, Check
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Talent } from '../../types';
-import WithdrawModal from '../Wallet/WithdrawModal';
 
 const EarningsPage: React.FC = () => {
   const { user } = useAuth();
@@ -11,7 +10,6 @@ const EarningsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
-  const [showWithdraw, setShowWithdraw] = useState(false);
   
   const talent = user as Talent;
 
@@ -114,19 +112,6 @@ const EarningsPage: React.FC = () => {
             <h2 className="text-base sm:text-lg font-medium text-green-100">Total Earnings</h2>
             <p className="text-3xl sm:text-4xl font-bold">{formatCurrency(totalEarnings)}</p>
           </div>
-           <button
-              className="mt-3 px-6 py-2 rounded-full shadow-md font-semibold text-white bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 transition-all duration-200 border-0 outline-none focus:ring-2 focus:ring-blue-300"
-              onClick={() => setShowWithdraw(true)}
-              disabled={totalEarnings < 1}
-              style={{
-                boxShadow: '0 4px 18px 0 rgba(32, 89, 246, 0.14)',
-                minWidth: 120,
-                fontSize: '1rem',
-                letterSpacing: '0.04em'
-              }}
-            >
-              Withdraw
-            </button>
           <div className="p-4 bg-white bg-opacity-20 rounded-full self-start sm:self-auto">
             <DollarSign className="h-8 w-8" />
           </div>
@@ -291,12 +276,6 @@ const EarningsPage: React.FC = () => {
         </div>
       </div>
     ))}
-    <WithdrawModal
-  open={showWithdraw}
-  onClose={() => setShowWithdraw(false)}
-  currentTotal={totalEarnings}
-  userId={talent.id}
-/>
   </div>
 ) : (
   <div className="text-center py-12">
