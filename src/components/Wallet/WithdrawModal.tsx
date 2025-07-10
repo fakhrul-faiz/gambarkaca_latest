@@ -52,7 +52,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
           bank_name: bankName,
           account_number: accountNumber,
           account_holder: accountHolder,
-          status: 'pending',
+          status: 'paid',
           requested_at: new Date().toISOString(),
         },
       ]);
