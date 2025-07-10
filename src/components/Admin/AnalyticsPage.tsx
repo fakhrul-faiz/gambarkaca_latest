@@ -8,6 +8,7 @@ import ExcelJS from 'exceljs';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import html2canvas from 'html2canvas';
 
 // Utility for grouping by month
 function groupByMonth(items, dateField, valueField?) {
