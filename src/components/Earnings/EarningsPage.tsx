@@ -151,6 +151,12 @@ const EarningsPage: React.FC = () => {
             </div>
           </div>
         </div>
+          <WithdrawModal
+    open={showWithdraw}
+    onClose={() => setShowWithdraw(false)}
+    currentTotal={totalEarnings}
+    userId={talent.id}
+  />
       </div>
 
       {/* Quick Stats */}
@@ -285,12 +291,7 @@ const EarningsPage: React.FC = () => {
         </div>
       </div>
     ))}
-      <WithdrawModal
-    open={showWithdraw}
-    onClose={() => setShowWithdraw(false)}
-    currentTotal={totalEarnings}
-    userId={talent.id}
-  />
+    
   </div>
 ) : (
   <div className="text-center py-12">
