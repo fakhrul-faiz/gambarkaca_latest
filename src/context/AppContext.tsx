@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Campaign, Job, Message, Transaction, Order, Earning, Founder, Talent, Notification } from '../types';
+import { Campaign, Job, Message, Transaction, Order, Earning, Founder, Talent, Notification, DirectMessage } from '../types';
 import { 
   getCampaigns, 
   getOrders, 
@@ -8,10 +8,12 @@ import {
   getMessages,
   getFounders,
   getTalents,
-  getNotifications,
+  getNotifications, 
+  getDirectMessages,
   subscribeToMessages,
   subscribeToOrders,
-  subscribeToNotifications
+  subscribeToNotifications,
+  subscribeToDirectMessages
 } from '../lib/api';
 import { useAuth } from './AuthContext';
 
@@ -25,6 +27,7 @@ interface AppContextType {
   founders: Founder[];
   talents: Talent[];
   notifications: Notification[];
+  directMessages: DirectMessage[];
   setCampaigns: (campaigns: Campaign[]) => void;
   setJobs: (jobs: Job[]) => void;
   setMessages: (messages: Message[]) => void;
@@ -34,6 +37,7 @@ interface AppContextType {
   setFounders: (founders: Founder[]) => void;
   setTalents: (talents: Talent[]) => void;
   setNotifications: (notifications: Notification[]) => void;
+  setDirectMessages: (directMessages: DirectMessage[]) => void;
   refreshData: () => Promise<void>;
   loading: boolean;
 }
@@ -59,6 +63,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [founders, setFounders] = useState<Founder[]>([]);
   const [talents, setTalents] = useState<Talent[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [directMessages, setDirectMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
   const refreshData = async () => {
@@ -90,7 +95,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           getMessages(),
           getFounders(),
           getTalents(),
-          getNotifications(user.id),
+          getNotifications(user.id)
         ]);
 
         // Handle results with proper error handling
@@ -140,8 +145,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const notificationsData = await getNotifications(user.id);
           setNotifications(notificationsData);
+          
+          // Load direct messages for admin
+          const directMessagesData = await getDirectMessages(user.id);
+          setDirectMessages(directMessagesData);
         } catch (error) {
           setNotifications([]);
+          setDirectMessages([]);
         }
 
       } else {
@@ -158,7 +168,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getTransactions(user.id),
         user.role === 'talent' ? getEarnings(user.id) : getEarnings(),
         getMessages(),
-        getNotifications(user.id),
+        getNotifications(user.id)
       ]);
 
       if (campaignsData.status === 'fulfilled') setCampaigns(campaignsData.value); else setCampaigns([]);
@@ -171,8 +181,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const notificationsData = await getNotifications(user.id);
         setNotifications(notificationsData);
+        
+        // Load direct messages for talent/founder
+        const directMessagesData = await getDirectMessages(user.id);
+        setDirectMessages(directMessagesData);
       } catch (error) {
         setNotifications([]);
+        setDirectMessages([]);
       }
 
       if (user.role === 'founder') {
@@ -209,6 +224,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setFounders([]);
       setTalents([]);
       setNotifications([]);
+      setDirectMessages([]);
       setJobs([]);
     }
   }, [user]);
@@ -221,11 +237,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     // Subscribe to notifications
     try {
-      const notificationSub = subscribeToNotifications(user.id, (newNotification) => {
+      const notificationSub = subscribeToNotifications(user.id, (newNotification: Notification) => {
         setNotifications(prev => [newNotification, ...prev]);
       });
       subscriptions.push(notificationSub);
     } catch (error) {
+      console.error('Error subscribing to notifications:', error);
+    }
+    
+    // Subscribe to direct messages
+    try {
+      const directMessageSub = subscribeToDirectMessages(user.id, (newMessage: DirectMessage) => {
+        setDirectMessages(prev => [...prev, newMessage]);
+      });
+      subscriptions.push(directMessageSub);
+    } catch (error) {
+      console.error('Error subscribing to direct messages:', error);
     }
 
     try {
@@ -272,6 +299,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         founders,
         talents,
         notifications,
+        directMessages,
         setCampaigns,
         setJobs,
         setMessages,
@@ -281,6 +309,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setFounders,
         setTalents,
         setNotifications,
+        setDirectMessages,
         refreshData,
         loading,
       }}
