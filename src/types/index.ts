@@ -17,7 +17,7 @@ export interface Founder extends User {
 
 export interface Talent extends User {
   bio?: string;
-  portfolio: string[];
+  portfolio: Array<{ url: string; type: 'image' | 'video' }>;
   rateLevel: 1 | 2 | 3;
   skills: string[];
   socialMedia?: {
