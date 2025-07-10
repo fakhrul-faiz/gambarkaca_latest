@@ -302,7 +302,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                 </div>
               </div>
 
-              {/* Portfolio Section */}
+        
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Portfolio (Optional)
