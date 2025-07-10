@@ -23,6 +23,7 @@ import AnalyticsPage from './components/Admin/AnalyticsPage';
 import FounderProfileModal from './components/Profile/FounderProfileModal';
 import TalentProfileModal from './components/Profile/TalentProfileModal';
 import AdminProfileModal from './components/Profile/AdminProfileModal';
+import WithdrawalsPage from './components/Wallet/WithdrawalsPage';
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
