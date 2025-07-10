@@ -49,36 +49,6 @@ const AnalyticsPage: React.FC = () => {
 
     const workbook = new ExcelJS.Workbook();
 
-    // --- Sheet 1: Campaign Payment Report (Orders) ---
-    const ordersWorksheet = workbook.addWorksheet('Campaign Payment Report');
-    ordersWorksheet.columns = [
-      { header: 'Campaign Title', key: 'campaign', width: 30 },
-      { header: 'Campaign Owner', key: 'founder', width: 24 },
-      { header: 'Order ID', key: 'order', width: 24 },
-      { header: 'Talent', key: 'talent', width: 24 },
-      { header: 'Status', key: 'status', width: 16 },
-      { header: 'Payout Amount (RM)', key: 'payout', width: 18 },
-      { header: 'Admin Fee (RM)', key: 'adminFee', width: 14 },
-      { header: 'Total Deduction (RM)', key: 'totalDeduct', width: 18 },
-      { header: 'Order Date', key: 'createdAt', width: 20 },
-    ];
-    filteredOrders.forEach(order => {
-      const campaign = campaigns.find(c => c.id === order.campaignId);
-      const adminFee = order.payout * 0.1;
-      ordersWorksheet.addRow({
-        campaign: campaign ? campaign.title : '',
-        founder: campaign?.founderName || '',
-        order: order.id,
-        talent: order.talentName,
-        status: order.status,
-        payout: Number(order.payout || 0).toFixed(2),
-        adminFee: Number(adminFee).toFixed(2),
-        totalDeduct: Number(order.payout + adminFee).toFixed(2),
-        createdAt: new Date(order.createdAt).toLocaleString(),
-      });
-    });
-    ordersWorksheet.getRow(1).font = { bold: true };
-
     // --- Sheet 2: Transactions Report ---
     const transactionsWorksheet = workbook.addWorksheet('Transactions Report');
     transactionsWorksheet.columns = [
