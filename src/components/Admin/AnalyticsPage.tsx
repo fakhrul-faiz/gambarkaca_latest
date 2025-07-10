@@ -43,6 +43,7 @@ const AnalyticsPage: React.FC = () => {
 
   // Export Excel with chart image
   const handleExportExcel = async () => {
+    console.log('Export triggered');
     setLoading(true);
 
     // 1. Render the chart as an image (use chartRef)
