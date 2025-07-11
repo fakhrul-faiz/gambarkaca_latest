@@ -1,7 +1,6 @@
-import React, { useState, useRef } from 'react';
-import { Mail, Lock, User, Building, Eye, EyeOff, AlertCircle, CheckCircle, Plus, Upload, Trash2, Camera, Video, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Mail, Lock, User, Building, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../lib/supabase';
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
@@ -16,15 +15,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     role: 'founder' as 'founder' | 'talent',
     company: '',
     bio: '',
-    skills: [] as string[],
-    portfolio: [] as Array<{ url: string; type: 'image' | 'video' }>,
   });
-  const [newSkill, setNewSkill] = useState('');
-  const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { register, loading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,7 +26,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     setError('');
     setSuccess('');
 
-    // Client-side validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -44,7 +37,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     }
 
     const result = await register(formData);
-    
     if (result.success) {
       if (formData.role === 'talent') {
         setSuccess('Registration successful! Please wait for admin approval before you can access the platform.');
@@ -56,94 +48,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     }
   };
 
-  const handleAddSkill = () => {
-    if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
-      setFormData({
-        ...formData,
-        skills: [...formData.skills, newSkill.trim()]
-      });
-      setNewSkill('');
-    }
-  };
-
-  const handleRemoveSkill = (skillToRemove: string) => {
-    setFormData({
-      ...formData,
-      skills: formData.skills.filter(skill => skill !== skillToRemove)
-    });
-  };
-
-  const handleFileSelect = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handlePortfolioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setUploadingPortfolio(true);
-    
-    try {
-      const uploadedItems = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        // Check file type
-        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-          console.warn(`${file.name} is not a valid image or video file.`);
-          continue;
-        }
-        
-        // Check file size (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
-          console.warn(`${file.name} is too large. Maximum size is 10MB.`);
-          continue;
-        }
-
-        const fileType = file.type.startsWith('image/') ? 'image' : 'video';
-        const fileExt = file.name.split('.').pop();
-        const fileName = `temp-${Date.now()}-${i}.${fileExt}`;
-        
-        const { data, error } = await supabase.storage
-          .from('portfolio')
-          .upload(`temp/${fileName}`, file, {
-            cacheControl: '3600',
-            upsert: true
-          });
-
-        if (error) {
-          console.error('Error uploading file:', error);
-          continue;
-        }
-
-        const { data: publicUrlData } = supabase.storage
-          .from('portfolio')
-          .getPublicUrl(`temp/${fileName}`);
-
-        uploadedItems.push({ url: publicUrlData.publicUrl, type: fileType as 'image' | 'video' });
-      }
-
-      setFormData(prev => ({ ...prev, portfolio: [...prev.portfolio, ...uploadedItems] }));
-    } finally {
-      setUploadingPortfolio(false);
-    }
-  };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value,
     }));
-  };
-
-  const handleRemovePortfolioItem = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      portfolio: prev.portfolio.filter((_, i) => i !== index)
-    }));
-    // Note: We don't delete from storage here since these are temporary uploads
   };
 
   return (
@@ -156,7 +66,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
           Create your account
         </h2>
       </div>
-
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
@@ -255,53 +164,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                   placeholder="Tell us about yourself and your content creation experience"
                 />
               </div>
-
-     
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Skills & Expertise
-                </label>
-                <div className="space-y-3">
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      value={newSkill}
-                      onChange={(e) => setNewSkill(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Add a skill (e.g., Photography, Video Editing)"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddSkill}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-1"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Add</span>
-                    </button>
-                  </div>
-                  
-                  {formData.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {formData.skills.map((skill, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
-                        >
-                          {skill}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSkill(skill)}
-                            className="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+            )}
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
@@ -390,7 +253,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
               </button>
             </div>
           </form>
-
           <div className="mt-6">
             <div className="text-center">
               <button
