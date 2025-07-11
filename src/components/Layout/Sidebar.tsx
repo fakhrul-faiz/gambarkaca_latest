@@ -50,7 +50,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, className 
           { id: 'marketplace', label: 'Marketplace', icon: Megaphone },
           { id: 'jobs', label: 'My Jobs', icon: Package },
           { id: 'earnings', label: 'Earnings', icon: Wallet },
-          { id: 'profile', label: 'Profile', icon: Settings },
           { id: 'withdrawals', label: 'Withdrawals', icon: DollarSign },
         ];
       default:
