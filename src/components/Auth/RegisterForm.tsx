@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Mail, Lock, User, Building, Eye, EyeOff, AlertCircle, CheckCircle, Plus, Upload, Trash2, Video, X } from 'lucide-react';
+import { Mail, Lock, User, Building, Eye, EyeOff, AlertCircle, CheckCircle, Plus, Upload, Trash2, Camera, Video, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
@@ -32,16 +32,19 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     setError('');
     setSuccess('');
 
+    // Client-side validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
+
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters long');
       return;
     }
-    const result = await register(formData);
 
+    const result = await register(formData);
+    
     if (result.success) {
       if (formData.role === 'talent') {
         setSuccess('Registration successful! Please wait for admin approval before you can access the platform.');
@@ -77,37 +80,50 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const handlePortfolioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+
     setUploadingPortfolio(true);
+    
     try {
       const uploadedItems = [];
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        
+        // Check file type
         if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
           console.warn(`${file.name} is not a valid image or video file.`);
           continue;
         }
+        
+        // Check file size (max 10MB)
         if (file.size > 10 * 1024 * 1024) {
           console.warn(`${file.name} is too large. Maximum size is 10MB.`);
           continue;
         }
+
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
         const fileExt = file.name.split('.').pop();
         const fileName = `temp-${Date.now()}-${i}.${fileExt}`;
+        
         const { data, error } = await supabase.storage
           .from('portfolio')
           .upload(`temp/${fileName}`, file, {
             cacheControl: '3600',
             upsert: true
           });
+
         if (error) {
           console.error('Error uploading file:', error);
           continue;
         }
+
         const { data: publicUrlData } = supabase.storage
           .from('portfolio')
           .getPublicUrl(`temp/${fileName}`);
+
         uploadedItems.push({ url: publicUrlData.publicUrl, type: fileType as 'image' | 'video' });
       }
+
       setFormData(prev => ({ ...prev, portfolio: [...prev.portfolio, ...uploadedItems] }));
     } finally {
       setUploadingPortfolio(false);
@@ -127,6 +143,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
       ...prev,
       portfolio: prev.portfolio.filter((_, i) => i !== index)
     }));
+    // Note: We don't delete from storage here since these are temporary uploads
   };
 
   return (
@@ -158,6 +175,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                 <option value="talent">Talent (Content Creator)</option>
               </select>
             </div>
+
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                 Full Name
@@ -178,6 +196,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                 />
               </div>
             </div>
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address
@@ -198,6 +217,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                 />
               </div>
             </div>
+
             {formData.role === 'founder' && (
               <div>
                 <label htmlFor="company" className="block text-sm font-medium text-gray-700">
@@ -219,151 +239,70 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                 </div>
               </div>
             )}
+
             {formData.role === 'talent' && (
-              <>
-                <div>
-                  <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
-                    Bio
-                  </label>
-                  <textarea
-                    id="bio"
-                    name="bio"
-                    rows={3}
-                    value={formData.bio}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Tell us about yourself and your content creation experience"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Skills & Expertise
-                  </label>
-                  <div className="space-y-3">
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        value={newSkill}
-                        onChange={e => setNewSkill(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddSkill();
-                          }
-                        }}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Add a skill (e.g., Photography, Video Editing)"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddSkill}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-1"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>Add</span>
-                      </button>
-                    </div>
-                    {formData.skills.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {formData.skills.map((skill, index) => (
-                          <span
-                            key={index}
-                            className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
-                          >
-                            {skill}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSkill(skill)}
-                              className="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Portfolio (Optional)
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 mb-2">
-                      Upload images or videos to showcase your work
-                    </p>
+              <div>
+                <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
+                  Bio
+                </label>
+                <textarea
+                  id="bio"
+                  name="bio"
+                  rows={3}
+                  value={formData.bio}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Tell us about yourself and your content creation experience"
+                />
+              </div>
+
+              {/* Skills Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Skills & Expertise
+                </label>
+                <div className="space-y-3">
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Add a skill (e.g., Photography, Video Editing)"
+                    />
                     <button
                       type="button"
-                      onClick={handleFileSelect}
-                      disabled={uploadingPortfolio}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      onClick={handleAddSkill}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-1"
                     >
-                      {uploadingPortfolio ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Uploading...
-                        </>
-                      ) : (
-                        <>Choose Files</>
-                      )}
+                      <Plus className="h-4 w-4" />
+                      <span>Add</span>
                     </button>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*,video/*"
-                      onChange={handlePortfolioUpload}
-                      className="hidden"
-                      ref={fileInputRef}
-                    />
-                    <p className="text-xs text-gray-500 mt-2">
-                      Max file size: 10MB. Supported formats: JPG, PNG, MP4, MOV
-                    </p>
                   </div>
-                  {formData.portfolio.length > 0 && (
-                    <div className="mt-4">
-                      <h5 className="text-sm font-medium text-gray-700 mb-3">Portfolio Preview</h5>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {formData.portfolio.map((item, index) => (
-                          <div key={index} className="relative group">
-                            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                              {item.type === 'image' ? (
-                                <img
-                                  src={item.url}
-                                  alt={`Portfolio ${index + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="relative w-full h-full">
-                                  <video
-                                    src={item.url}
-                                    className="w-full h-full object-cover"
-                                    controls
-                                  />
-                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Video className="h-8 w-8 text-white drop-shadow-lg" />
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemovePortfolioItem(index)}
-                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                  
+                  {formData.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.skills.map((skill, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                        >
+                          {skill}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSkill(skill)}
+                            className="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>
-              </>
-            )}
+              </div>
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
@@ -395,6 +334,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                 </button>
               </div>
             </div>
+
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                 Confirm Password
@@ -415,6 +355,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                 />
               </div>
             </div>
+
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
@@ -426,6 +367,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                 </div>
               </div>
             )}
+
             {success && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
@@ -437,6 +379,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                 </div>
               </div>
             )}
+
             <div>
               <button
                 type="submit"
@@ -447,6 +390,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
               </button>
             </div>
           </form>
+
           <div className="mt-6">
             <div className="text-center">
               <button
