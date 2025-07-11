@@ -52,39 +52,38 @@ const MarketplacePage: React.FC = () => {
           <p className="text-gray-600">Find and apply to campaigns that match your skills</p>
         </div>
 
-        {/* Approval Pending Message */}
-{/* Approval Pending Message */}
-<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
-  <div className="flex flex-col items-center space-y-4">
-    <div className="p-4 bg-yellow-100 rounded-full">
-      <Lock className="h-12 w-12 text-yellow-600" />
-    </div>
-    <div>
-      <h3 className="text-lg font-semibold text-yellow-900 mb-2">Account Pending Approval</h3>
-      <p className="text-yellow-700 mb-4">
-        Your talent account is currently under review by our admin team.
-        You will be able to view and apply to campaigns once your account is approved.
-      </p>
-      {/* New: Complete Profile Reminder */}
-      <div className="bg-white rounded-lg p-4 border border-yellow-200 mb-4">
-        <h4 className="font-medium text-yellow-800 mb-2">Profile Incomplete?</h4>
-        <p className="text-sm text-yellow-700">
-          Please make sure your profile information is complete. 
-          A complete profile helps us process your approval faster and gives you the best chance to be accepted.
-        </p>
+      {/* Approval Pending Message */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="p-4 bg-yellow-100 rounded-full">
+            <Lock className="h-12 w-12 text-yellow-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-yellow-900 mb-2">Account Pending Approval</h3>
+            <p className="text-yellow-700 mb-4">
+              Your talent account is currently under review by our admin team.
+              You will be able to view and apply to campaigns once your account is approved.
+            </p>
+            {/* New: Complete Profile Reminder */}
+            <div className="bg-white rounded-lg p-4 border border-yellow-200 mb-4">
+              <h4 className="font-medium text-yellow-800 mb-2">Profile Incomplete?</h4>
+              <p className="text-sm text-yellow-700">
+                Please make sure your profile information is complete. 
+                A complete profile helps us process your approval faster and gives you the best chance to be accepted.
+              </p>
+            </div>
+            <div className="bg-white rounded-lg p-4 border border-yellow-200">
+              <h4 className="font-medium text-yellow-800 mb-2">What happens next?</h4>
+              <ul className="text-sm text-yellow-700 space-y-1 text-left">
+                <li>• Our admin will review your profile details</li>
+                <li>• Your rate level (1-3 stars) will be assigned</li>
+                <li>• You will receive an email notification once approved</li>
+                <li>• Access to the marketplace will be enabled automatically</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="bg-white rounded-lg p-4 border border-yellow-200">
-        <h4 className="font-medium text-yellow-800 mb-2">What happens next?</h4>
-        <ul className="text-sm text-yellow-700 space-y-1 text-left">
-          <li>• Our admin will review your profile details</li>
-          <li>• Your rate level (1-3 stars) will be assigned</li>
-          <li>• You will receive an email notification once approved</li>
-          <li>• Access to the marketplace will be enabled automatically</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</div>
 
 
         {/* Profile Completion Tips */}
