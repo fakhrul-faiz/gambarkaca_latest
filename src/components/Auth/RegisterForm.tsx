@@ -256,7 +256,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
                 />
               </div>
 
-              {/* Skills Section */}
+     
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Skills & Expertise
