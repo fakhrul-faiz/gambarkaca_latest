@@ -398,10 +398,6 @@ export const signIn = async (email: string, password: string) => {
       throw new Error('Your account has been suspended. Please contact support.');
     }
 
-    if (profile.status === 'pending' && profile.role === 'talent') {
-      throw new Error('Your account is pending approval. Please wait for admin approval before signing in.');
-    }
-
     const convertedProfile = convertProfileToUser(profile);
 
     return {
