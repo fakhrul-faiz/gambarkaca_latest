@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { createTransaction, updateProfile } from '../../lib/api';
+import { createTransaction, updateProfile, requestChipWithdrawal } from '../../lib/api';
 
 interface WithdrawModalProps {
   open: boolean;
@@ -24,6 +24,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       return;
     }
     setLoading(true);
+    +    let withdrawalId: string | null = null;
     try {
       // 1. Deduct from profile.total_earning
       await updateProfile(userId, { total_earnings: currentTotal - amount });
@@ -44,7 +45,8 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         relatedJobId: undefined,
       });
       // 4. Optional: Store withdrawal request in a separate table
-      await supabase.from('withdrawals').insert([
+      // await supabase.from('withdrawals').insert([
+      +      const { data: withdrawalData, error: withdrawalError } = await supabase.from('withdrawals').insert([
         {
           user_id: userId,
           amount,
@@ -52,12 +54,31 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
           bank_name: bankName,
           account_number: accountNumber,
           account_holder: accountHolder,
-          status: 'paid',
+          // status: 'paid',
+          +status: 'pending',
           requested_at: new Date().toISOString(),
         },
-      ]);
-      alert('Withdrawal request submitted successfully!');
-      onClose();
+      // ]);
+      // alert('Withdrawal request submitted successfully!');
+      // onClose();
++      ]).select('id').single();
++      
++      if (withdrawalError) throw withdrawalError;
++      withdrawalId = withdrawalData.id;
++      
++      // 5. Call the Edge Function to initiate CHIP payout
++      await requestChipWithdrawal(
++        userId,
++        amount,
++        bankName,
++        accountNumber,
++        accountHolder,
++        withdrawalId
++      );
++      
++      alert('Withdrawal request submitted and processing!');
++      onClose();
++  
     } catch (err: any) {
       alert('Failed to submit withdrawal: ' + err.message);
     }
