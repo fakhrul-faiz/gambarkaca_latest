@@ -55,30 +55,30 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
           account_number: accountNumber,
           account_holder: accountHolder,
           // status: 'paid',
-          +status: 'pending',
+          status: 'pending',
           requested_at: new Date().toISOString(),
         },
       // ]);
       // alert('Withdrawal request submitted successfully!');
       // onClose();
-+      ]).select('id').single();
-+      
-+      if (withdrawalError) throw withdrawalError;
-+      withdrawalId = withdrawalData.id;
-+      
-+      // 5. Call the Edge Function to initiate CHIP payout
-+      await requestChipWithdrawal(
-+        userId,
-+        amount,
-+        bankName,
-+        accountNumber,
-+        accountHolder,
-+        withdrawalId
-+      );
-+      
-+      alert('Withdrawal request submitted and processing!');
-+      onClose();
-+  
+      ]).select('id').single();
+
+      if (withdrawalError) throw withdrawalError;
+      withdrawalId = withdrawalData.id;
+      
+      // 5. Call the Edge Function to initiate CHIP payout
+      await requestChipWithdrawal(
+        userId,
+        amount,
+        bankName,
+        accountNumber,
+        accountHolder,
+        withdrawalId
+      );
+      
+      alert('Withdrawal request submitted and processing!');
+      onClose();
+  
     } catch (err: any) {
       alert('Failed to submit withdrawal: ' + err.message);
     }
