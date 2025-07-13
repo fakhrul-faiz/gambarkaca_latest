@@ -1230,9 +1230,49 @@ export async function deleteReviewMedia(orderId: string, mediaUrl: string): Prom
 export const getWithdrawals = async (userId: string) => {
   const { data, error } = await supabase
     .from('withdrawals')
-    .select('*')
+    .select('id, user_id, amount, admin_fee, bank_name, account_number, account_holder, status, requested_at, chip_payout_id, chip_status, chip_error_message')
     .eq('user_id', userId)
     .order('requested_at', { ascending: false });
   if (error) throw error;
   return data || [];
 };
+
++export const requestChipWithdrawal = async (
++  userId: string,
++  amount: number,
++  bankName: string,
++  accountNumber: string,
++  accountHolder: string,
++  withdrawalId: string
++) => {
++  try {
++    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/initiate-chip-payout`;
++    
++    const response = await fetch(apiUrl, {
++      method: 'POST',
++      headers: {
++        'Content-Type': 'application/json',
++        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
++      },
++      body: JSON.stringify({
++        userId,
++        amount,
++        bankName,
++        accountNumber,
++        accountHolder,
++        withdrawalId
++      })
++    });
++    
++    const data = await response.json();
++    
++    if (!response.ok) {
++      throw new Error(data.error || data.message || 'Failed to process withdrawal request');
++    }
++    
++    return data;
++  } catch (error: any) {
++    console.error('Error requesting CHIP withdrawal:', error);
++    throw new Error(`Withdrawal request failed: ${error.message}`);
++  }
++};
