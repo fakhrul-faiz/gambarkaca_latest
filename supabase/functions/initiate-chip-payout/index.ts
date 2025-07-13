@@ -39,9 +39,9 @@ serve(async (req) => {
     );
 
     // Retrieve CHIP API keys from environment variables (Supabase Secrets)
-    const chipBrandId = Deno.env.get('YOUR_CHIP_BRAND_ID_SECRET_NAME'); // Replace with your secret name
-    const chipSecretKey = Deno.env.get('YOUR_CHIP_SECRET_KEY_SECRET_NAME'); // Replace with your secret name
-    const chipApiEndpoint = Deno.env.get('YOUR_CHIP_SEND_API_ENDPOINT'); // Replace with your secret name or hardcode if public
+    const chipBrandId = Deno.env.get('61f5f57b-e93c-4250-b42f-dbcb37f8f288'); // Replace with your secret name
+    const chipSecretKey = Deno.env.get('1v12aRvfIAFMaiqhRSjNBgTutp1VoCPPimHVtJTdQGlrYIWUZnOFtHQ10bHFAv6A6QcIbnHDxKOBtXYA2ShNwQ=='); // Replace with your secret name
+    const chipApiEndpoint = Deno.env.get('https://gate.chip-in.asia/api/v1/charges'); // Replace with your secret name or hardcode if public
 
     if (!chipBrandId || !chipSecretKey || !chipApiEndpoint) {
       console.error('CHIP API credentials not found in environment variables.');
