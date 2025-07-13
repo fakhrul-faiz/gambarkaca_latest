@@ -25,7 +25,6 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
     }
     setLoading(true);
     let withdrawalId: string | null = null;
-    let withdrawalId: string | null = null;
     try {
       // 1. Deduct from profile.total_earning
       await updateProfile(userId, { total_earnings: currentTotal - amount });
