@@ -47,17 +47,14 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       // 4. Optional: Store withdrawal request in a separate table
       // await supabase.from('withdrawals').insert([
       const { data: withdrawalData, error: withdrawalError } = await supabase.from('withdrawals').insert({
-        {
-          user_id: userId,
-          amount,
-          admin_fee: adminFee,
-          bank_name: bankName,
-          account_number: accountNumber,
-          account_holder: accountHolder,
-          // status: 'paid',
-          status: 'pending',
-          requested_at: new Date().toISOString(),
-        },
+        user_id: userId,
+        amount,
+        admin_fee: adminFee,
+        bank_name: bankName,
+        account_number: accountNumber,
+        account_holder: accountHolder,
+        status: 'pending',
+        requested_at: new Date().toISOString(),
       }).select('id').single();
 
       if (withdrawalError) throw withdrawalError;
