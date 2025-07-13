@@ -1237,42 +1237,42 @@ export const getWithdrawals = async (userId: string) => {
   return data || [];
 };
 
-+export const requestChipWithdrawal = async (
-+  userId: string,
-+  amount: number,
-+  bankName: string,
-+  accountNumber: string,
-+  accountHolder: string,
-+  withdrawalId: string
-+) => {
-+  try {
-+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/initiate-chip-payout`;
-+    
-+    const response = await fetch(apiUrl, {
-+      method: 'POST',
-+      headers: {
-+        'Content-Type': 'application/json',
-+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-+      },
-+      body: JSON.stringify({
-+        userId,
-+        amount,
-+        bankName,
-+        accountNumber,
-+        accountHolder,
-+        withdrawalId
-+      })
-+    });
-+    
-+    const data = await response.json();
-+    
-+    if (!response.ok) {
-+      throw new Error(data.error || data.message || 'Failed to process withdrawal request');
-+    }
-+    
-+    return data;
-+  } catch (error: any) {
-+    console.error('Error requesting CHIP withdrawal:', error);
-+    throw new Error(`Withdrawal request failed: ${error.message}`);
-+  }
-+};
+export const requestChipWithdrawal = async (
+  userId: string,
+  amount: number,
+  bankName: string,
+  accountNumber: string,
+  accountHolder: string,
+  withdrawalId: string
+) => {
+  try {
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/initiate-chip-payout`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        userId,
+        amount,
+        bankName,
+        accountNumber,
+        accountHolder,
+        withdrawalId
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || data.message || 'Failed to process withdrawal request');
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Error requesting CHIP withdrawal:', error);
+    throw new Error(`Withdrawal request failed: ${error.message}`);
+  }
+};
