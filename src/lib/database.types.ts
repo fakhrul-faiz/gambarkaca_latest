@@ -20,6 +20,9 @@ export interface Database {
                   account_holder: string;
                   status: string;
                   requested_at: string;
+                  chip_payout_id: string;
+                  chip_status: string;
+                  chip_error_message: string;
                 };
                 Insert: {
                   id?: string;
@@ -31,6 +34,9 @@ export interface Database {
                   account_holder: string;
                   status?: string;
                   requested_at?: string;
+                  chip_payout_id: string;
+                  chip_status: string;
+                  chip_error_message: string;
                 };
                 Update: {
                   id?: string;
@@ -42,6 +48,9 @@ export interface Database {
                   account_holder?: string;
                   status?: string;
                   requested_at?: string;
+                  chip_payout_id: string;
+                  chip_status: string;
+                  chip_error_message: string;
                 };
               };
 
