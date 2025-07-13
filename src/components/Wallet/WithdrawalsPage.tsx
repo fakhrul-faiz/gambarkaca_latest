@@ -140,6 +140,7 @@ const WithdrawalsPage: React.FC = () => {
                   <th className="px-4 py-2 text-left font-medium text-gray-700">Bank</th>
                   <th className="px-4 py-2 text-left font-medium text-gray-700">Account No.</th>
                   <th className="px-4 py-2 text-left font-medium text-gray-700">Account Holder</th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">CHIP Status</th>
                   <th className="px-4 py-2 text-left font-medium text-gray-700">Status</th>
                 </tr>
               </thead>
@@ -152,6 +153,14 @@ const WithdrawalsPage: React.FC = () => {
                     <td className="px-4 py-2">{w.bank_name}</td>
                     <td className="px-4 py-2">{w.account_number}</td>
                     <td className="px-4 py-2">{w.account_holder}</td>
+                    <td className="px-4 py-2">
+                      {w.chip_status ? (
+                        <span className={`capitalize ${w.chip_status === 'successful' ? 'text-green-700' : w.chip_status === 'failed' ? 'text-red-700' : 'text-yellow-700'}`}>
+                          {w.chip_status}
+                          {w.chip_error_message && <span className="block text-xs text-red-500">{w.chip_error_message}</span>}
+                        </span>
+                      ) : 'N/A'}
+                    </td>
                     <td className={`px-4 py-2 font-semibold flex items-center gap-2 ${statusColor[w.status] || 'text-gray-700'}`}>
                       {statusIcon[w.status] || <Clock className="h-5 w-5" />} 
                       <span className="capitalize">{w.status}</span>

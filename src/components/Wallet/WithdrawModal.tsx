@@ -25,6 +25,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
     }
     setLoading(true);
     let withdrawalId: string | null = null;
+    let withdrawalId: string | null = null;
     try {
       // 1. Deduct from profile.total_earning
       await updateProfile(userId, { total_earnings: currentTotal - amount });
@@ -38,7 +39,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       });
       // 3. Create transaction for admin (credit, only adminFee)
       await createTransaction({
-        userId: '066e9f3d-9570-405e-8a43-ab1ed542e9a7', // Use your admin user ID
+        userId: '066e9f3d-9570-405e-8a43-ab1ed542e9a7',
         type: 'credit',
         amount: adminFee,
         description: `Admin Fee (10%) from withdrawal`,
@@ -46,7 +47,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       });
       // 4. Optional: Store withdrawal request in a separate table
       // await supabase.from('withdrawals').insert([
-      const { data: withdrawalData, error: withdrawalError } = await supabase.from('withdrawals').insert([
+      const { data: withdrawalData, error: withdrawalError } = await supabase.from('withdrawals').insert({
         {
           user_id: userId,
           amount,
@@ -58,13 +59,23 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
           status: 'pending',
           requested_at: new Date().toISOString(),
         },
-      // ]);
-      // alert('Withdrawal request submitted successfully!');
-      // onClose();
-      ]).select('id').single();
+      }).select('id').single();
 
       if (withdrawalError) throw withdrawalError;
       withdrawalId = withdrawalData.id;
+      
+      // 5. Call the Edge Function to initiate CHIP payout
+      await requestChipWithdrawal(
+        userId,
+        amount,
+        bankName,
+        accountNumber,
+        accountHolder,
+        withdrawalId
+      );
+      
+      alert('Withdrawal request submitted and processing!');
+      onClose();
       
       // 5. Call the Edge Function to initiate CHIP payout
       await requestChipWithdrawal(

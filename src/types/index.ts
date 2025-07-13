@@ -148,6 +148,21 @@ export interface DirectMessage {
   createdAt: Date;
 }
 
+export interface Withdrawal {
+  id: string;
+  user_id: string;
+  amount: number;
+  admin_fee: number;
+  bank_name: string;
+  account_number: string;
+  account_holder: string;
+  status: string;
+  requested_at: string;
+  chip_payout_id: string | null;
+  chip_status: string | null;
+  chip_error_message: string | null;
+}
+
 // Updated pricing configuration with your exact prices
 export const PRICING_CONFIG = {
   rateLevel: {
