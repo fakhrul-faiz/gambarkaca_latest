@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Mail, Calendar, DollarSign, CheckCircle, Ban, Star, Award, Instagram, Youtube, Camera, Video, Play, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Mail, Calendar, DollarSign, CheckCircle, Ban, Star, Award, Instagram, Youtube, Camera, Video, Play, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Talent {
   id: string;
@@ -30,11 +30,15 @@ interface TalentDetailsModalProps {
   onStatusChange: (talentId: string, newStatus: 'active' | 'suspended') => void;
 }
 
-const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({ 
-  talent, 
-  onClose, 
-  onStatusChange 
+const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
+  talent,
+  onClose,
+  onStatusChange,
 }) => {
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -74,8 +78,31 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
   };
 
   const isVideoUrl = (url: string) => {
-    return url.includes('.mp4') || url.includes('.mov') || url.includes('.webm') || 
-           url.includes('video') || url.endsWith('.mp4');
+    return (
+      url.includes('.mp4') ||
+      url.includes('.mov') ||
+      url.includes('.webm') ||
+      url.includes('video') ||
+      url.endsWith('.mp4')
+    );
+  };
+
+  // Lightbox controls
+  const handleOpenLightbox = (idx: number) => {
+    setLightboxIndex(idx);
+    setLightboxOpen(true);
+  };
+  const handleCloseLightbox = () => setLightboxOpen(false);
+
+  const handleNextMedia = () => {
+    setLightboxIndex((prev) =>
+      prev + 1 < talent.portfolio.length ? prev + 1 : 0
+    );
+  };
+  const handlePrevMedia = () => {
+    setLightboxIndex((prev) =>
+      prev - 1 >= 0 ? prev - 1 : talent.portfolio.length - 1
+    );
   };
 
   return (
@@ -96,9 +123,9 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
           <div className="flex items-start space-x-4">
             <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0">
               {talent.avatar ? (
-                <img 
-                  src={talent.avatar} 
-                  alt={talent.name} 
+                <img
+                  src={talent.avatar}
+                  alt={talent.name}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -145,7 +172,6 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
                   </div>
                 </div>
               </div>
-
               <div className="bg-blue-50 rounded-lg p-4">
                 <div className="flex items-center space-x-3">
                   <CheckCircle className="h-8 w-8 text-blue-600" />
@@ -155,7 +181,6 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
                   </div>
                 </div>
               </div>
-
               <div className="bg-yellow-50 rounded-lg p-4">
                 <div className="flex items-center space-x-3">
                   <Star className="h-8 w-8 text-yellow-600" />
@@ -167,7 +192,6 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
                   </div>
                 </div>
               </div>
-
               <div className="bg-purple-50 rounded-lg p-4">
                 <div className="flex items-center space-x-3">
                   <Award className="h-8 w-8 text-purple-600" />
@@ -200,7 +224,7 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
           )}
 
           {/* Social Media Section */}
-          {talent.socialMedia && (Object.values(talent.socialMedia).some(val => val)) && (
+          {talent.socialMedia && Object.values(talent.socialMedia).some(val => val) && (
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-3">Social Media</h4>
               <div className="space-y-2">
@@ -222,7 +246,11 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
                   <div className="flex items-center space-x-3">
                     <Youtube className="h-5 w-5 text-red-500" />
                     <a
-                      href={talent.socialMedia.youtube.startsWith('http') ? talent.socialMedia.youtube : `https://youtube.com/${talent.socialMedia.youtube}`}
+                      href={
+                        talent.socialMedia.youtube.startsWith('http')
+                          ? talent.socialMedia.youtube
+                          : `https://youtube.com/${talent.socialMedia.youtube}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
@@ -242,33 +270,38 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
               <h4 className="text-lg font-semibold text-gray-900 mb-3">Portfolio</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {talent.portfolio.map((item, index) => (
-                  <div key={index} className="relative group">
+                  <button
+                    key={index}
+                    type="button"
+                    className="relative group focus:outline-none"
+                    onClick={() => handleOpenLightbox(index)}
+                  >
                     {isVideoUrl(item) ? (
                       <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
                         <video
                           src={item}
                           className="w-full h-full object-cover"
-                          controls
+                          // Don't show controls in preview grid
                         />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                           <Play className="h-10 w-10 text-white" />
                         </div>
                       </div>
                     ) : (
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
                         <img
                           src={item}
                           alt={`Portfolio ${index + 1}`}
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center pointer-events-none">
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                             <Camera className="h-6 w-6 text-white" />
                           </div>
                         </div>
                       </div>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -282,16 +315,19 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
                 <Calendar className="h-5 w-5 text-gray-400" />
                 <div>
                   <p className="text-sm text-gray-600">Account Created</p>
-                  <p className="font-medium text-gray-900">{talent.createdAt.toLocaleDateString()}</p>
+                  <p className="font-medium text-gray-900">
+                    {talent.createdAt.toLocaleDateString()}
+                  </p>
                 </div>
               </div>
-
               {talent.lastLogin && (
                 <div className="flex items-center space-x-3">
                   <CheckCircle className="h-5 w-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-600">Last Login</p>
-                    <p className="font-medium text-gray-900">{talent.lastLogin.toLocaleDateString()}</p>
+                    <p className="font-medium text-gray-900">
+                      {talent.lastLogin.toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               )}
@@ -320,7 +356,7 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
           >
             Close
           </button>
-          
+
           {talent.status === 'pending' && (
             <button
               onClick={() => handleStatusChange('active')}
@@ -330,7 +366,7 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
               <span>Approve Account</span>
             </button>
           )}
-          
+
           {talent.status === 'active' && (
             <button
               onClick={() => handleStatusChange('suspended')}
@@ -340,7 +376,7 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
               <span>Suspend Account</span>
             </button>
           )}
-          
+
           {talent.status === 'suspended' && (
             <button
               onClick={() => handleStatusChange('active')}
@@ -351,6 +387,59 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
             </button>
           )}
         </div>
+
+        {/* LIGHTBOX MODAL */}
+        {lightboxOpen && (
+          <div className="fixed inset-0 z-[9999] bg-black bg-opacity-80 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={handleCloseLightbox}
+              className="absolute top-4 right-4 bg-gray-700 bg-opacity-70 hover:bg-opacity-90 text-white rounded-full p-2 focus:outline-none"
+              aria-label="Close"
+            >
+              <X className="h-7 w-7" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrevMedia}
+              className="absolute left-4 md:left-12 top-1/2 -translate-y-1/2 bg-gray-700 bg-opacity-70 hover:bg-opacity-90 text-white rounded-full p-2 focus:outline-none"
+              aria-label="Previous"
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </button>
+
+            <div className="relative flex flex-col items-center justify-center max-w-[90vw] max-h-[80vh]">
+              {isVideoUrl(talent.portfolio[lightboxIndex]) ? (
+                <video
+                  src={talent.portfolio[lightboxIndex]}
+                  className="max-h-[70vh] max-w-full rounded-lg shadow-lg"
+                  controls
+                  autoPlay
+                />
+              ) : (
+                <img
+                  src={talent.portfolio[lightboxIndex]}
+                  alt={`Portfolio ${lightboxIndex + 1}`}
+                  className="max-h-[70vh] max-w-full rounded-lg shadow-lg object-contain"
+                />
+              )}
+              <div className="mt-3 text-white text-center text-sm">
+                Portfolio {lightboxIndex + 1} of {talent.portfolio.length}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNextMedia}
+              className="absolute right-4 md:right-12 top-1/2 -translate-y-1/2 bg-gray-700 bg-opacity-70 hover:bg-opacity-90 text-white rounded-full p-2 focus:outline-none"
+              aria-label="Next"
+            >
+              <ChevronRight className="h-8 w-8" />
+            </button>
+          </div>
+        )}
+        {/* END LIGHTBOX MODAL */}
       </div>
     </div>
   );
