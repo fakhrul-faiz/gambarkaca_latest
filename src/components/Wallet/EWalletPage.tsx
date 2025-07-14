@@ -74,7 +74,7 @@ const EWalletPage: React.FC = () => {
         description: `Wallet Top Up - Credit Card`,
       };
 
-      console.log("lalu sini");
+      console.log("lalu sini", newTransaction);
 
       await createTransaction(newTransaction);
       await refreshData();
