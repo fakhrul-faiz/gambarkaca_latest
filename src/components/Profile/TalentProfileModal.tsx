@@ -26,6 +26,7 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({ onClose }) => {
     socialMedia: {
       instagram: talent.socialMedia?.instagram || '',
       youtube: talent.socialMedia?.youtube || '',
+      tiktok: talent.socialMedia?.tiktok || ''
     },
   });
   const [newSkill, setNewSkill] = useState('');
