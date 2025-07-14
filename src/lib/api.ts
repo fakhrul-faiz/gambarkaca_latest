@@ -420,7 +420,13 @@ export const signOut = async () => {
 
 export const getCurrentUser = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+    
+    // Handle refresh token errors by clearing the session
+    if (getUserError && getUserError.message && getUserError.message.includes('refresh_token_not_found')) {
+      await supabase.auth.signOut();
+      return null;
+    }
     
     if (!user) return null;
 
@@ -440,6 +446,11 @@ export const getCurrentUser = async () => {
     return convertProfileToUser(profile);
   } catch (error) {
     console.error('Get current user error:', error);
+    // Also handle refresh token errors in the catch block
+    if (error && typeof error === 'object' && 'message' in error && 
+        typeof error.message === 'string' && error.message.includes('refresh_token_not_found')) {
+      await supabase.auth.signOut();
+    }
     return null;
   }
 };
