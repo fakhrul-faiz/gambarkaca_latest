@@ -841,7 +841,7 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
   const { data, error } = await supabase
     .from('transactions') 
     .insert([{
-      user_id: transactionData.userId, 
+      user_id: transactionData.user_id || transactionData.userId, 
       type: transactionData.type, 
       amount: transactionData.amount,
       description: transactionData.description, 
