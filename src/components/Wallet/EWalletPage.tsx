@@ -82,7 +82,7 @@ console.log("laulalu");
 
       setShowTopUpModal(false);
     } catch (error) {
-      alert('Top-up failed. Please try again.');
+      console.log('Top-up failed. Please try again.');
     } finally {
       setLoading(false);
     }
