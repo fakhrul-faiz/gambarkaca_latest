@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, User, Mail, Star, Save, Camera, Instagram, Youtube, Tiktok, Plus, Upload, Video, Trash2 } from 'lucide-react';
+import { X, User, Mail, Star, Save, Camera, Instagram, Youtube, Music, Plus, Upload, Video, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Talent } from '../../types';
@@ -438,7 +438,7 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({ onClose }) => {
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Tiktok className="h-5 w-5 text-red-500" />
+                      <Music className="h-5 w-5 text-black" />
                     </div>
                     <input
                       type="text"
