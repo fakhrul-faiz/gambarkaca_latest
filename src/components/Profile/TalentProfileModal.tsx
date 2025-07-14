@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, User, Mail, Star, Save, Camera, Instagram, Youtube, Plus, Upload, Video, Trash2 } from 'lucide-react';
+import { X, User, Mail, Star, Save, Camera, Instagram, Youtube, Tiktok, Plus, Upload, Video, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Talent } from '../../types';
