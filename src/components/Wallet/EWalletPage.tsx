@@ -56,6 +56,12 @@ const EWalletPage: React.FC = () => {
   };
 
   const handleTopUpSuccess = async (amount, relatedJobId) => {
+
+     if (!founder || !founder.id) {
+    alert("Founder information not available. Please refresh the page and try again.");
+    return;
+  }
+    
     if (loading) return;
     setLoading(true);
 
