@@ -70,7 +70,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         withdrawalId
       );
       
-      alert('Withdrawal request submitted and processing!');
+      console.log('Withdrawal request submitted and processing!');
       onClose();
       
       // 5. Call the Edge Function to initiate CHIP payout
@@ -83,7 +83,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         withdrawalId
       );
       
-      alert('Withdrawal request submitted and processing!');
+      console.log('Withdrawal request submitted and processing!');
       onClose();
   
     } catch (err: any) {
