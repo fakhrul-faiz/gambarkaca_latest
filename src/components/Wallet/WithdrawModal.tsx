@@ -92,7 +92,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       onClose();
   
     } catch (err: any) {
-      alert('Failed to submit withdrawal: ' + err.message);
+      console.log('Failed to submit withdrawal: ' + err.message);
     }
     setLoading(false);
   };
