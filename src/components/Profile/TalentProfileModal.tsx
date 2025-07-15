@@ -91,7 +91,7 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({ onClose }) => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) throw new Error('User not authenticated');
 
-      const uploadedItems = [];
+      const uploadedItems: { url: string; type: 'image' | 'video' }[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];

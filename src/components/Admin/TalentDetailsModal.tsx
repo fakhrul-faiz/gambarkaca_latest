@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, Calendar, DollarSign, CheckCircle, Ban, Star, Award, Instagram, Youtube, Camera, Video, Play, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Mail, Calendar, DollarSign, CheckCircle, Ban, Star, Award, Instagram, Youtube, Music, Camera, Video, Play, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Talent {
   id: string;
@@ -238,6 +238,20 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
                       className="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
                     >
                       {talent.socialMedia.instagram}
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </a>
+                  </div>
+                )}
+                {talent.socialMedia.tiktok && (
+                  <div className="flex items-center space-x-3">
+                    <Music className="h-5 w-5 text-pink-500" />
+                    <a
+                      href={`https://tiktok.com/${talent.socialMedia.tiktok.replace('@', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
+                    >
+                      {talent.socialMedia.tiktok}
                       <ExternalLink className="h-3 w-3 ml-1" />
                     </a>
                   </div>
