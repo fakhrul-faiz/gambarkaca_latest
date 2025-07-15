@@ -183,6 +183,8 @@ function App() {
                 {showProfileModal && user.role === 'admin' && (
                   <AdminProfileModal onClose={() => setShowProfileModal(false)} />
                 )}
+
+                <Footer />
               </div>
             );
           };
