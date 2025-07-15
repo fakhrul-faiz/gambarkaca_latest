@@ -20,7 +20,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
 
   const handleWithdraw = async () => {
     if (!bankName || !accountNumber || !accountHolder || amount <= 0 || amount > currentTotal) {
-      alert('Please fill all fields and ensure the amount is valid.');
+      console.log('Please fill all fields and ensure the amount is valid.');
       return;
     }
     setLoading(true);
@@ -36,6 +36,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         description: `Withdrawal Request (Bank: ${bankName})`,
         relatedJobId: undefined,
       });
+      console.log("masuk 1");
       // 3. Create transaction for admin (credit, only adminFee)
       await createTransaction({
         userId: '066e9f3d-9570-405e-8a43-ab1ed542e9a7',
@@ -46,6 +47,8 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       });
       // 4. Optional: Store withdrawal request in a separate table
       // await supabase.from('withdrawals').insert([
+      console.log("masuk 2");
+      
       const { data: withdrawalData, error: withdrawalError } = await supabase.from('withdrawals').insert({
         user_id: userId,
         amount,
@@ -59,6 +62,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
 
       if (withdrawalError) throw withdrawalError;
       withdrawalId = withdrawalData.id;
+      console.log("masuk 3");
       
       // 5. Call the Edge Function to initiate CHIP payout
       await requestChipWithdrawal(
@@ -72,6 +76,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       
       console.log('Withdrawal request submitted and processing!');
       onClose();
+      console.log("masuk 4");
       
       // 5. Call the Edge Function to initiate CHIP payout
       await requestChipWithdrawal(
