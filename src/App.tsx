@@ -26,6 +26,7 @@ import AdminProfileModal from './components/Profile/AdminProfileModal';
 import MessagesPage from './components/Admin/MessagesPage';
 import MessageFab from './components/Common/MessageFab';
 import WithdrawalsPage from './components/Wallet/WithdrawalsPage';
+import Footer from './components/Layout/Footer';
 
 function App() {
   return (
