@@ -159,33 +159,37 @@ function App() {
             };
 
             return (
-              <div className="min-h-screen bg-gray-50">
-                <Navbar />
-                <div className="flex flex-col md:flex-row">
-                  <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} className="w-full md:w-64" />
-                  <main className="flex-1 p-4 md:p-6">
-                    {renderCurrentPage()}
-                  </main>
-                </div>
-                
-                {/* Message FAB for talents */}
-                {user.role === 'talent' && <MessageFab />}
+              <div className="flex flex-col min-h-screen bg-gray-50">
+    <Navbar />
 
-                {/* Profile Modals */}
-                {showProfileModal && user.role === 'founder' && (
-                  <FounderProfileModal onClose={() => setShowProfileModal(false)} />
-                )}
-                
-                {showProfileModal && user.role === 'talent' && (
-                  <TalentProfileModal onClose={() => setShowProfileModal(false)} />
-                )}
+    {/* This is the main flex-1 area that grows and pushes footer down */}
+    <div className="flex flex-1 flex-col md:flex-row">
+      <Sidebar
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        className="w-full md:w-64"
+      />
+      <main className="flex-1 p-4 md:p-6">
+        {renderCurrentPage()}
+      </main>
+    </div>
+    
+    {/* Message FAB for talents */}
+    {user.role === 'talent' && <MessageFab />}
 
-                {showProfileModal && user.role === 'admin' && (
-                  <AdminProfileModal onClose={() => setShowProfileModal(false)} />
-                )}
+    {/* Profile Modals */}
+    {showProfileModal && user.role === 'founder' && (
+      <FounderProfileModal onClose={() => setShowProfileModal(false)} />
+    )}
+    {showProfileModal && user.role === 'talent' && (
+      <TalentProfileModal onClose={() => setShowProfileModal(false)} />
+    )}
+    {showProfileModal && user.role === 'admin' && (
+      <AdminProfileModal onClose={() => setShowProfileModal(false)} />
+    )}
 
-                <Footer />
-              </div>
+    <Footer />
+  </div>
             );
           };
           
