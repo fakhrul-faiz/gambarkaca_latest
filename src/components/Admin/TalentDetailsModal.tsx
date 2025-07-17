@@ -246,7 +246,7 @@ const TalentDetailsModal: React.FC<TalentDetailsModalProps> = ({
                   <div className="flex items-center space-x-3">
                     <Music className="h-5 w-5 text-pink-500" />
                     <a
-                      href={`https://tiktok.com/${talent.socialMedia.tiktok.replace('@', '')}`}
+                      href={`${talent.socialMedia.tiktok.replace('@', '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
