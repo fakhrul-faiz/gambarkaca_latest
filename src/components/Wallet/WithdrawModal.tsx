@@ -121,12 +121,35 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         </div>
         <div className="mb-2">
           <label className="block text-sm">Bank Name</label>
-          <input
+          <select
             className="border rounded px-2 py-1 w-full"
             value={bankName}
             onChange={e => setBankName(e.target.value)}
             disabled={loading}
-          />
+          >
+            <option value="">Select Bank</option>
+            <option value="Maybank">Maybank (Malayan Banking Berhad)</option>
+            <option value="CIMB Bank">CIMB Bank</option>
+            <option value="Public Bank">Public Bank Berhad</option>
+            <option value="RHB Bank">RHB Bank</option>
+            <option value="Hong Leong Bank">Hong Leong Bank</option>
+            <option value="AmBank">AmBank (AMMB Holdings Berhad)</option>
+            <option value="UOB Malaysia">UOB Malaysia</option>
+            <option value="OCBC Bank Malaysia">OCBC Bank Malaysia</option>
+            <option value="Standard Chartered Malaysia">Standard Chartered Malaysia</option>
+            <option value="HSBC Malaysia">HSBC Malaysia</option>
+            <option value="Affin Bank">Affin Bank</option>
+            <option value="Alliance Bank">Alliance Bank Malaysia</option>
+            <option value="Bank Islam Malaysia">Bank Islam Malaysia</option>
+            <option value="Bank Muamalat Malaysia">Bank Muamalat Malaysia</option>
+            <option value="Bank Rakyat">Bank Rakyat</option>
+            <option value="BSN">Bank Simpanan Nasional (BSN)</option>
+            <option value="Agro Bank">Agro Bank</option>
+            <option value="Bank Kerjasama Rakyat Malaysia">Bank Kerjasama Rakyat Malaysia</option>
+            <option value="SME Bank">SME Bank</option>
+            <option value="Export-Import Bank of Malaysia">Export-Import Bank of Malaysia</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
         <div className="mb-2">
           <label className="block text-sm">Account Number</label>
