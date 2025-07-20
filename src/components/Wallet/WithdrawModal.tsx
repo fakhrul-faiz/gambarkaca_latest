@@ -32,6 +32,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       console.log("masuk 2");
       
 
+
        // 1. Deduct from profile.total_earning
       await updateProfile(userId, { total_earnings: currentTotal - amount });
       // 2. Create transaction for talent (debit)
