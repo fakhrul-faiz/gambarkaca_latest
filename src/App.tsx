@@ -28,173 +28,172 @@ import MessageFab from './components/Common/MessageFab';
 import WithdrawalsPage from './components/Wallet/WithdrawalsPage';
 import Footer from './components/Layout/Footer';
 
+// Move AppContent outside to be a proper React component
+const AppContent = () => {
+  const { user, loading } = useAuth();
+  const [showRegister, setShowRegister] = useState(false);
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Listen for profile modal events from navbar
+  useEffect(() => {
+    const handleOpenProfileModal = () => {
+      setShowProfileModal(true);
+    };
+
+    window.addEventListener('openProfileModal', handleOpenProfileModal);
+    return () => {
+      window.removeEventListener('openProfileModal', handleOpenProfileModal);
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return showRegister ? (
+      <RegisterForm onSwitchToLogin={() => setShowRegister(false)} />
+    ) : (
+      <LoginForm onSwitchToRegister={() => setShowRegister(true)} />
+    );
+  }
+
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        if (user.role === 'admin') return <AdminDashboard />;
+        if (user.role === 'founder') return <FounderDashboard />;
+        if (user.role === 'talent') return <TalentDashboard />;
+        break;
+      case 'founders':
+        if (user.role === 'admin') return <FoundersPage />;
+        // Redirect non-admins to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
+      case 'talents':
+        if (user.role === 'admin') return <TalentsPage />;
+        // Redirect non-admins to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
+      case 'payments':
+        if (user.role === 'admin') return <PaymentsPage />;
+        // Redirect non-admins to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
+      case 'analytics':
+        if (user.role === 'admin') return <AnalyticsPage />;
+        // Redirect non-admins to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
+      case 'messages':
+        if (user.role === 'admin') return <MessagesPage />;
+        // Redirect non-admins to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
+      case 'marketplace':
+        // Only allow talents to access marketplace
+        if (user.role === 'talent') {
+          return <MarketplacePage />;
+        } else {
+          // Redirect founders and admins to dashboard
+          setCurrentPage('dashboard');
+          return user.role === 'founder' ? <FounderDashboard /> : <AdminDashboard />;
+        }
+      case 'campaigns':
+        if (user.role === 'founder') return <CampaignsPage />;
+        if (user.role === 'admin') return <AdminCampaignsPage />;
+        // Redirect talents to dashboard
+        setCurrentPage('dashboard');
+        return <TalentDashboard />;
+      case 'orders':
+        if (user.role === 'founder') return <OrdersPage />;
+        // Redirect non-founders to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'admin' ? <AdminDashboard /> : <TalentDashboard />;
+      case 'jobs':
+        if (user.role === 'talent') return <MyJobsPage />;
+      case 'withdrawals':
+        if (user.role === 'talent') return <WithdrawalsPage />;
+        // Redirect non-talents to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'admin' ? <AdminDashboard /> : <FounderDashboard />;
+      case 'reviews':
+        if (user.role === 'founder') return <ReviewsPage />;
+        // Redirect non-founders to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'admin' ? <AdminDashboard /> : <TalentDashboard />;
+      case 'wallet':
+        if (user.role === 'founder') return <EWalletPage />;
+        // Redirect non-founders to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'admin' ? <AdminDashboard /> : <TalentDashboard />;
+      case 'earnings':
+        if (user.role === 'talent') return <EarningsPage />;
+        // Redirect non-talents to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'admin' ? <AdminDashboard /> : <FounderDashboard />;
+      default:
+        return (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
+              </h2>
+              <p className="text-gray-600">This page is under development</p>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Navbar />
+
+      {/* This is the main flex-1 area that grows and pushes footer down */}
+      <div className="flex flex-1 flex-col md:flex-row">
+        <Sidebar
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          className="w-full md:w-64"
+        />
+        <main className="flex-1 p-4 md:p-6">
+          {renderCurrentPage()}
+        </main>
+      </div>
+      
+      {/* Message FAB for talents */}
+      {user.role === 'talent' && <MessageFab />}
+
+      {/* Profile Modals */}
+      {showProfileModal && user.role === 'founder' && (
+        <FounderProfileModal onClose={() => setShowProfileModal(false)} />
+      )}
+      {showProfileModal && user.role === 'talent' && (
+        <TalentProfileModal onClose={() => setShowProfileModal(false)} />
+      )}
+      {showProfileModal && user.role === 'admin' && (
+        <AdminProfileModal onClose={() => setShowProfileModal(false)} />
+      )}
+
+      <Footer />
+    </div>
+  );
+};
+
 function App() {
   return (
     <AuthProvider>
       <AppProvider>
-        {(() => {
-          const AppContent = () => {
-            const { user, loading } = useAuth();
-            const [showRegister, setShowRegister] = useState(false);
-            const [currentPage, setCurrentPage] = useState('dashboard');
-            const [showProfileModal, setShowProfileModal] = useState(false);
-
-            // Listen for profile modal events from navbar
-            useEffect(() => {
-              const handleOpenProfileModal = () => {
-                setShowProfileModal(true);
-              };
-
-              window.addEventListener('openProfileModal', handleOpenProfileModal);
-              return () => {
-                window.removeEventListener('openProfileModal', handleOpenProfileModal);
-              };
-            }, []);
-
-            if (loading) {
-              return (
-                <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading...</p>
-                  </div>
-                </div>
-              );
-            }
-
-            if (!user) {
-              return showRegister ? (
-                <RegisterForm onSwitchToLogin={() => setShowRegister(false)} />
-              ) : (
-                <LoginForm onSwitchToRegister={() => setShowRegister(true)} />
-              );
-            }
-
-            const renderCurrentPage = () => {
-              switch (currentPage) {
-                case 'dashboard':
-                  if (user.role === 'admin') return <AdminDashboard />;
-                  if (user.role === 'founder') return <FounderDashboard />;
-                  if (user.role === 'talent') return <TalentDashboard />;
-                  break;
-                case 'founders':
-                  if (user.role === 'admin') return <FoundersPage />;
-                  // Redirect non-admins to dashboard
-                  setCurrentPage('dashboard');
-                  return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
-                case 'talents':
-                  if (user.role === 'admin') return <TalentsPage />;
-                  // Redirect non-admins to dashboard
-                  setCurrentPage('dashboard');
-                  return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
-                case 'payments':
-                  if (user.role === 'admin') return <PaymentsPage />;
-                  // Redirect non-admins to dashboard
-                  setCurrentPage('dashboard');
-                  return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
-                case 'analytics':
-                  if (user.role === 'admin') return <AnalyticsPage />;
-                  // Redirect non-admins to dashboard
-                  setCurrentPage('dashboard');
-                  return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
-                case 'messages':
-                  if (user.role === 'admin') return <MessagesPage />;
-                  // Redirect non-admins to dashboard
-                  setCurrentPage('dashboard');
-                  return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
-                case 'marketplace':
-                  // Only allow talents to access marketplace
-                  if (user.role === 'talent') {
-                    return <MarketplacePage />;
-                  } else {
-                    // Redirect founders and admins to dashboard
-                    setCurrentPage('dashboard');
-                    return user.role === 'founder' ? <FounderDashboard /> : <AdminDashboard />;
-                  }
-                case 'campaigns':
-                  if (user.role === 'founder') return <CampaignsPage />;
-                  if (user.role === 'admin') return <AdminCampaignsPage />;
-                  // Redirect talents to dashboard
-                  setCurrentPage('dashboard');
-                  return <TalentDashboard />;
-                case 'orders':
-                  if (user.role === 'founder') return <OrdersPage />;
-                  // Redirect non-founders to dashboard
-                  setCurrentPage('dashboard');
-                  return user.role === 'admin' ? <AdminDashboard /> : <TalentDashboard />;
-                case 'jobs':
-                  if (user.role === 'talent') return <MyJobsPage />;
-                case 'withdrawals':
-                  if (user.role === 'talent') return <WithdrawalsPage />;
-                  // Redirect non-talents to dashboard
-                  setCurrentPage('dashboard');
-                  return user.role === 'admin' ? <AdminDashboard /> : <FounderDashboard />;
-                case 'reviews':
-                  if (user.role === 'founder') return <ReviewsPage />;
-                  // Redirect non-founders to dashboard
-                  setCurrentPage('dashboard');
-                  return user.role === 'admin' ? <AdminDashboard /> : <TalentDashboard />;
-                case 'wallet':
-                  if (user.role === 'founder') return <EWalletPage />;
-                  // Redirect non-founders to dashboard
-                  setCurrentPage('dashboard');
-                  return user.role === 'admin' ? <AdminDashboard /> : <TalentDashboard />;
-                case 'earnings':
-                  if (user.role === 'talent') return <EarningsPage />;
-                  // Redirect non-talents to dashboard
-                  setCurrentPage('dashboard');
-                  return user.role === 'admin' ? <AdminDashboard /> : <FounderDashboard />;
-                default:
-                  return (
-                    <div className="flex items-center justify-center h-64">
-                      <div className="text-center">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                          {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
-                        </h2>
-                        <p className="text-gray-600">This page is under development</p>
-                      </div>
-                    </div>
-                  );
-              }
-            };
-
-            return (
-              <div className="flex flex-col min-h-screen bg-gray-50">
-    <Navbar />
-
-    {/* This is the main flex-1 area that grows and pushes footer down */}
-    <div className="flex flex-1 flex-col md:flex-row">
-      <Sidebar
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        className="w-full md:w-64"
-      />
-      <main className="flex-1 p-4 md:p-6">
-        {renderCurrentPage()}
-      </main>
-    </div>
-    
-    {/* Message FAB for talents */}
-    {user.role === 'talent' && <MessageFab />}
-
-    {/* Profile Modals */}
-    {showProfileModal && user.role === 'founder' && (
-      <FounderProfileModal onClose={() => setShowProfileModal(false)} />
-    )}
-    {showProfileModal && user.role === 'talent' && (
-      <TalentProfileModal onClose={() => setShowProfileModal(false)} />
-    )}
-    {showProfileModal && user.role === 'admin' && (
-      <AdminProfileModal onClose={() => setShowProfileModal(false)} />
-    )}
-
-    <Footer />
-  </div>
-            );
-          };
-          
-          return <AppContent />;
-        })()}
+        <AppContent />
       </AppProvider>
     </AuthProvider>
   );
