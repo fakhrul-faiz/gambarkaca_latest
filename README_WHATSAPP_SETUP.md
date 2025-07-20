@@ -14,6 +14,19 @@ This guide explains how to set up WhatsApp notifications using wasapbot in your 
 
 ## Setup Steps
 
+### ⚠️ CRITICAL: Enable pg_net Extension First
+
+**Before running any migrations, you MUST enable the pg_net extension:**
+
+1. Go to your Supabase Dashboard
+2. Navigate to **Database** → **Extensions**
+3. Search for "pg_net"
+4. Click **"Enable"** next to pg_net
+5. Wait for it to be enabled (may take a few moments)
+6. Verify it's enabled by checking the "Enabled" tab
+
+**If you don't enable pg_net first, you'll get the error: "schema 'net' does not exist"**
+
 ### 1. Configure Environment Variables
 
 In your Supabase project dashboard:
