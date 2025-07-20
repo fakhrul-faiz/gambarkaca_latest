@@ -26,25 +26,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
     setLoading(true);
     let withdrawalId: string | null = null;
     try {
-      // 1. Deduct from profile.total_earning
-      await updateProfile(userId, { total_earnings: currentTotal - amount });
-      // 2. Create transaction for talent (debit)
-      await createTransaction({
-        userId,
-        type: 'debit',
-        amount,
-        description: `Withdrawal Request (Bank: ${bankName})`,
-        relatedJobId: undefined,
-      });
-      console.log("masuk 1");
-      // 3. Create transaction for admin (credit, only adminFee)
-      await createTransaction({
-        userId: '066e9f3d-9570-405e-8a43-ab1ed542e9a7',
-        type: 'credit',
-        amount: adminFee,
-        description: `Admin Fee (10%) from withdrawal`,
-        relatedJobId: undefined,
-      });
+     
       // 4. Optional: Store withdrawal request in a separate table
       // await supabase.from('withdrawals').insert([
       console.log("masuk 2");
@@ -87,8 +69,30 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         accountHolder,
         withdrawalId
       );
-      
+
       console.log('Withdrawal request submitted and processing!');
+      
+
+       // 1. Deduct from profile.total_earning
+      await updateProfile(userId, { total_earnings: currentTotal - amount });
+      // 2. Create transaction for talent (debit)
+      await createTransaction({
+        userId,
+        type: 'debit',
+        amount,
+        description: `Withdrawal Request (Bank: ${bankName})`,
+        relatedJobId: undefined,
+      });
+      console.log("masuk 1");
+      // 3. Create transaction for admin (credit, only adminFee)
+      await createTransaction({
+        userId: '066e9f3d-9570-405e-8a43-ab1ed542e9a7',
+        type: 'credit',
+        amount: adminFee,
+        description: `Admin Fee (10%) from withdrawal`,
+        relatedJobId: undefined,
+      });
+      
       onClose();
   
     } catch (err: any) {
