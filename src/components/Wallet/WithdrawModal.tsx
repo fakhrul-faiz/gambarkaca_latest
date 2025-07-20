@@ -47,17 +47,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       console.log("masuk 3");
       
       // 5. Call the Edge Function to initiate CHIP payout
-      await requestChipWithdrawal(
-        userId,
-        amount,
-        bankName,
-        accountNumber,
-        accountHolder,
-        withdrawalId
-      );
-      
-      console.log('Withdrawal request submitted and processing!');
-      onClose();
+
       console.log("masuk 4");
       
       // 5. Call the Edge Function to initiate CHIP payout
