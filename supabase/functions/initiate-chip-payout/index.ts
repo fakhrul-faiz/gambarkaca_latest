@@ -7,20 +7,27 @@ import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 const ADMIN_USER_ID = '066e9f3d-9570-405e-8a43-ab1ed542e9a7'; // Replace with your actual admin user ID
 
 serve(async (req) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
       status: 405,
     });
   }
 
   try {
     const { userId, amount, bankName, accountNumber, accountHolder, withdrawalId } = await req.json();
+    
+    console.log('Received withdrawal request:', { userId, amount, bankName, accountNumber, accountHolder, withdrawalId });
 
     // Basic input validation
     if (!userId || !amount || !bankName || !accountNumber || !accountHolder || !withdrawalId) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 400,
       });
     }
@@ -35,11 +42,15 @@ serve(async (req) => {
     const chipBrandId = Deno.env.get('CHIP_BRAND_ID');
     const chipSecretKey = Deno.env.get('CHIP_SECRET_KEY');
     const chipApiEndpoint = Deno.env.get('CHIP_API_ENDPOINT') || 'https://gate.chip-in.asia/api/v1/charges';
+    
+    console.log('CHIP API Endpoint:', chipApiEndpoint);
+    console.log('CHIP Brand ID available:', !!chipBrandId);
+    console.log('CHIP Secret Key available:', !!chipSecretKey);
 
     if (!chipBrandId || !chipSecretKey || !chipApiEndpoint) {
       console.error('CHIP API credentials not found in environment variables.');
       return new Response(JSON.stringify({ error: 'Server configuration error: CHIP API credentials missing.' }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 500,
       });
     }
@@ -50,6 +61,8 @@ serve(async (req) => {
     let chipErrorMessage = null;
 
     try {
+      console.log('Attempting CHIP API call to:', chipApiEndpoint);
+      
       const chipResponse = await fetch(chipApiEndpoint, {
         method: 'POST',
         headers: {
@@ -70,8 +83,11 @@ serve(async (req) => {
           // Add any other required fields by CHIP API
         }),
       });
+      
+      console.log('CHIP API response status:', chipResponse.status);
 
       const chipData = await chipResponse.json();
+      console.log('CHIP API response data:', chipData);
 
       if (chipResponse.ok) {
         chipPayoutId = chipData.id; // Assuming CHIP returns an ID for the payout
@@ -86,6 +102,7 @@ serve(async (req) => {
       chipStatus = 'failed';
       chipErrorMessage = `Network or unexpected CHIP API error: ${chipApiError.message}`;
       console.error(`Error calling CHIP API: ${chipApiError.message}`);
+      console.error('Full CHIP API error:', chipApiError);
     }
 
     // --- 2. Update `withdrawals` table with CHIP details ---
@@ -102,7 +119,7 @@ serve(async (req) => {
     if (updateWithdrawalError) {
       console.error('Error updating withdrawal record with CHIP details:', updateWithdrawalError);
       return new Response(JSON.stringify({ error: 'Failed to update withdrawal record after CHIP call.' }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 500,
       });
     }
@@ -110,7 +127,7 @@ serve(async (req) => {
     if (chipStatus !== 'successful') {
       // If CHIP payout failed, return error immediately
       return new Response(JSON.stringify({ success: false, message: `Withdrawal failed: ${chipErrorMessage}` }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 400,
       });
     }
@@ -129,7 +146,7 @@ serve(async (req) => {
     if (fetchProfileError || !currentProfile) {
       console.error('Error fetching talent profile:', fetchProfileError);
       return new Response(JSON.stringify({ error: 'Failed to fetch talent profile for earnings update.' }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 500,
       });
     }
@@ -144,7 +161,7 @@ serve(async (req) => {
     if (updateProfileError) {
       console.error('Error updating talent total_earnings:', updateProfileError);
       return new Response(JSON.stringify({ error: 'Failed to update talent earnings.' }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 500,
       });
     }
@@ -164,7 +181,7 @@ serve(async (req) => {
       console.error('Error creating talent transaction:', talentTxError);
       // Consider rolling back profile update if transaction fails
       return new Response(JSON.stringify({ error: 'Failed to record talent transaction.' }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 500,
       });
     }
@@ -184,19 +201,19 @@ serve(async (req) => {
       console.error('Error creating admin transaction:', adminTxError);
       // Consider rolling back previous transactions if this fails
       return new Response(JSON.stringify({ error: 'Failed to record admin fee transaction.' }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 500,
       });
     }
 
     return new Response(JSON.stringify({ success: true, message: 'Withdrawal initiated successfully.' }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
       status: 200,
     });
   } catch (error) {
     console.error('Unhandled error in Edge Function:', error.message);
     return new Response(JSON.stringify({ error: 'Internal Server Error', details: error.message }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
       status: 500,
     });
   }

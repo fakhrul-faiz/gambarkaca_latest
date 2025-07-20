@@ -1259,6 +1259,9 @@ export async function deleteReviewMedia(orderId: string, mediaUrl: string): Prom
       try {
         const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/initiate-chip-payout`;
         
+        console.log('Requesting CHIP withdrawal:', { userId, amount, bankName, accountNumber, accountHolder, withdrawalId });
+        console.log('API URL:', apiUrl);
+        
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -1275,7 +1278,11 @@ export async function deleteReviewMedia(orderId: string, mediaUrl: string): Prom
           })
         });
         
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
         const data = await response.json();
+        console.log('Response data:', data);
         
         if (!response.ok) {
           throw new Error(data.error || data.message || 'Failed to process withdrawal request');
@@ -1284,6 +1291,12 @@ export async function deleteReviewMedia(orderId: string, mediaUrl: string): Prom
         return data;
       } catch (error: any) {
         console.error('Error requesting CHIP withdrawal:', error);
-        throw new Error(`Withdrawal request failed: ${error.message}`);
+        
+        // Provide more specific error messages
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+          throw new Error('Network error: Unable to connect to withdrawal service. Please check your internet connection and try again.');
+        }
+        
+        throw new Error(`Withdrawal request failed: ${error.message || 'Unknown error occurred'}`);
       }
     };
