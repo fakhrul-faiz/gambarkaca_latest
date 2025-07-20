@@ -849,7 +849,7 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
     }])
     .select();
 
-
+console.log("masuk sini");
 
   if (error) throw error;
 
