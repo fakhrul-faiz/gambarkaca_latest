@@ -1237,6 +1237,38 @@ export async function deleteReviewMedia(orderId: string, mediaUrl: string): Prom
   }
 };
 
+// Test WhatsApp notification function (for development/testing)
+export const testWhatsAppNotification = async (userId: string, title: string, message: string) => {
+  try {
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-whatsapp-notification`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        title: title,
+        message: message,
+        type: 'test'
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to send WhatsApp notification');
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Error sending test WhatsApp notification:', error);
+    throw new Error(`WhatsApp notification failed: ${error.message || 'Unknown error occurred'}`);
+  }
+};
+
     // Fetch withdrawals for a user
     export const getWithdrawals = async (userId: string) => {
       const { data, error } = await supabase

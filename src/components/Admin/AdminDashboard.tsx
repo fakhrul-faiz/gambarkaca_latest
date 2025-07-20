@@ -1,9 +1,11 @@
 import React from 'react';
-import { Users, Star, Megaphone, DollarSign, TrendingUp, AlertCircle, CheckCircle, Calendar, Package } from 'lucide-react';
+import { Users, Star, Megaphone, DollarSign, TrendingUp, AlertCircle, CheckCircle, Calendar, Package, MessageCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { testWhatsAppNotification } from '../../lib/api';
 
 const AdminDashboard: React.FC = () => {
   const { founders, talents, campaigns, orders, transactions, earnings } = useApp();
+  const [testingWhatsApp, setTestingWhatsApp] = React.useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ms-MY', {
@@ -75,6 +77,32 @@ const AdminDashboard: React.FC = () => {
     },
   ];
 
+  const handleTestWhatsApp = async () => {
+    if (!talents.length) {
+      alert('No talents found to test WhatsApp notification');
+      return;
+    }
+
+    const testTalent = talents.find(t => t.phone); // Find a talent with a phone number
+    if (!testTalent) {
+      alert('No talents with phone numbers found for testing');
+      return;
+    }
+
+    setTestingWhatsApp(true);
+    try {
+      await testWhatsAppNotification(
+        testTalent.id,
+        'Test Notification',
+        `Hello ${testTalent.name}! This is a test WhatsApp notification from GambarKaca platform.`
+      );
+      alert(`Test WhatsApp notification sent to ${testTalent.name} (${testTalent.phone})`);
+    } catch (error: any) {
+      alert(`Failed to send test notification: ${error.message}`);
+    } finally {
+      setTestingWhatsApp(false);
+    }
+  };
   const recentActivity = [
     ...talents.filter(t => t.status === 'pending').slice(0, 2).map(talent => ({
       id: `talent-${talent.id}`,
@@ -107,6 +135,21 @@ const AdminDashboard: React.FC = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
         <p className="text-gray-600">Monitor and manage the GambarKaca platform</p>
+        
+        {/* WhatsApp Test Button */}
+        <div className="mt-4">
+          <button
+            onClick={handleTestWhatsApp}
+            disabled={testingWhatsApp}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            {testingWhatsApp ? 'Sending Test...' : 'Test WhatsApp Notification'}
+          </button>
+          <p className="text-xs text-gray-500 mt-1">
+            Sends a test WhatsApp message to a talent with a phone number
+          </p>
+        </div>
       </div>
 
       {/* Stats Grid */}
