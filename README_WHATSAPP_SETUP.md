@@ -27,6 +27,15 @@ This guide explains how to set up WhatsApp notifications using wasapbot in your 
 
 **If you don't enable pg_net first, you'll get the error: "schema 'net' does not exist"**
 
+### ⚠️ IMPORTANT: Re-enabling After Temporary Disable
+
+If you previously ran a migration that disabled WhatsApp notifications due to pg_net issues, you need to:
+
+1. **First enable pg_net extension** (as described above)
+2. **Run the re-enable migration**: `re_enable_whatsapp_notifications.sql`
+3. **Configure Supabase settings** (as described below)
+4. **Set environment variables** (as described below)
+
 ### 1. Configure Environment Variables
 
 In your Supabase project dashboard:

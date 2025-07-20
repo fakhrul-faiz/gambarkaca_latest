@@ -96,7 +96,7 @@ const AdminDashboard: React.FC = () => {
         'Test Notification',
         `Hello ${testTalent.name}! This is a test WhatsApp notification from GambarKaca platform.`
       );
-      alert(`Test WhatsApp notification sent to ${testTalent.name} (${testTalent.phone})`);
+      alert(`Test WhatsApp notification request sent to ${testTalent.name} (${testTalent.phone}). Check the Edge Function logs in Supabase Dashboard to see if it was delivered successfully.`);
     } catch (error: any) {
       alert(`Failed to send test notification: ${error.message}`);
     } finally {
