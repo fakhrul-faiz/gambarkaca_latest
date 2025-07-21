@@ -31,7 +31,36 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       // await supabase.from('withdrawals').insert([
       console.log("masuk 2");
       
+      const { data: withdrawalData, error: withdrawalError } = await supabase.from('withdrawals').insert({
+        user_id: userId,
+        amount,
+        admin_fee: adminFee,
+        bank_name: bankName,
+        account_number: accountNumber,
+        account_holder: accountHolder,
+        status: 'pending',
+        requested_at: new Date().toISOString(),
+      }).select('id').single();
 
+      if (withdrawalError) throw withdrawalError;
+      withdrawalId = withdrawalData.id;
+      console.log("masuk 3");
+      
+      // 5. Call the Edge Function to initiate CHIP payout
+
+      console.log("masuk 4");
+      
+      // 5. Call the Edge Function to initiate CHIP payout
+      await requestChipWithdrawal(
+        userId,
+        amount,
+        bankName,
+        accountNumber,
+        accountHolder,
+        withdrawalId
+      );
+
+      console.log('Withdrawal request submitted and processing!');
       
 
        // 1. Deduct from profile.total_earning
