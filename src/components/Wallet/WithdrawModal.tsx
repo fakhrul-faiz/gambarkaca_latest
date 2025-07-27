@@ -9,28 +9,59 @@ interface WithdrawModalProps {
   userId: string;
 }
 
+const bankCodeMap: Record<string, string> = {
+  "Maybank": "MBBEMYKL",
+  "CIMB Bank": "CIBBMYKL",
+  "Public Bank": "PBBEMYKL",
+  "RHB Bank": "RHBBMYKL",
+  "Hong Leong Bank": "HLBBMYKL",
+  "AmBank": "ARBKMYKL",
+  "UOB Malaysia": "UOVBMYKL",
+  "OCBC Bank Malaysia": "OCBCMYKL",
+  "Standard Chartered Malaysia": "SCBLMYKX",
+  "HSBC Malaysia": "HBMBMYKL",
+  "Affin Bank": "PHBMMYKL",
+  "Alliance Bank": "MFBBMYKL",
+  "Bank Islam Malaysia": "BIMBMYKL",
+  "Bank Muamalat Malaysia": "BMMBMYKL",
+  "Bank Rakyat": "BKRMMYKL",
+  "BSN": "BSNAMYK1",
+  "Agro Bank": "AGOBMYKL",
+  "Bank Kerjasama Rakyat Malaysia": "BKRMMYKL",
+  "SME Bank": "SMEBMYKL",
+  "Export-Import Bank of Malaysia": "EXIMMYKL"
+};
+
 const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTotal, userId }) => {
   const [amount, setAmount] = useState(currentTotal);
   const [bankName, setBankName] = useState('');
+  const [bankCode, setBankCode] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountHolder, setAccountHolder] = useState('');
+  const [email, setEmail] = useState('');
+  const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+
   const adminFee = amount * 0.1;
   const finalAmount = amount * 0.9;
 
+  const handleBankSelection = (selected: string) => {
+    setBankName(selected);
+    setBankCode(bankCodeMap[selected] || '');
+  };
+
   const handleWithdraw = async () => {
-    if (!bankName || !accountNumber || !accountHolder || amount <= 0 || amount > currentTotal) {
-      console.log('Please fill all fields and ensure the amount is valid.');
+    if (!bankName || !bankCode || !accountNumber || !accountHolder || !email || !description || amount <= 0 || amount > currentTotal) {
+      console.log('❌ Please fill all fields and ensure the amount is valid.');
       return;
     }
+
     setLoading(true);
     let withdrawalId: string | null = null;
+
     try {
-     
-      // 4. Optional: Store withdrawal request in a separate table
-      // await supabase.from('withdrawals').insert([
-      console.log("masuk 2");
-      
+      console.log("➡️ Inserting withdrawal record...");
+
       const { data: withdrawalData, error: withdrawalError } = await supabase.from('withdrawals').insert({
         user_id: userId,
         amount,
@@ -43,14 +74,11 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
       }).select('id').single();
 
       if (withdrawalError) throw withdrawalError;
-      withdrawalId = withdrawalData.id;
-      console.log("masuk 3");
-      
-      // 5. Call the Edge Function to initiate CHIP payout
 
-      console.log("masuk 4");
-      
-      // 5. Call the Edge Function to initiate CHIP payout
+      withdrawalId = withdrawalData.id;
+      console.log("✅ Withdrawal record created, ID:", withdrawalId);
+
+      console.log("➡️ Calling CHIP Edge Function...");
       await requestChipWithdrawal(
         userId,
         amount,
@@ -58,18 +86,17 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         accountNumber,
         accountHolder,
         withdrawalId,
-        description,
-        bankCode,
         email,
-        description
+        description,
+        bankCode
       );
 
-      console.log('Withdrawal request submitted and processing!');
-      
+      console.log('✅ Withdrawal request submitted & processing!');
 
-       // 1. Deduct from profile.total_earning
+      // Update profile balance
       await updateProfile(userId, { total_earnings: currentTotal - amount });
-      // 2. Create transaction for talent (debit)
+
+      // Create talent debit transaction
       await createTransaction({
         userId,
         type: 'debit',
@@ -77,8 +104,8 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         description: `Withdrawal Request (Bank: ${bankName})`,
         relatedJobId: undefined,
       });
-      console.log("masuk 1");
-      // 3. Create transaction for admin (credit, only adminFee)
+
+      // Admin fee transaction
       await createTransaction({
         userId: '066e9f3d-9570-405e-8a43-ab1ed542e9a7',
         type: 'credit',
@@ -86,12 +113,13 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         description: `Admin Fee (10%) from withdrawal`,
         relatedJobId: undefined,
       });
-      
+
       onClose();
-  
+
     } catch (err: any) {
-      console.log('Failed to submit withdrawal: ' + err.message);
+      console.log('❌ Failed to submit withdrawal: ' + err.message);
     }
+
     setLoading(false);
   };
 
@@ -105,6 +133,8 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         <p className="mb-3 text-yellow-700 font-medium">
           10% admin fee will be deducted from the requested amount.
         </p>
+
+        {/* Amount */}
         <div className="mb-2">
           <label className="block text-sm">Amount</label>
           <input
@@ -117,38 +147,37 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
             disabled={loading}
           />
         </div>
+
+        {/* Bank Name */}
         <div className="mb-2">
           <label className="block text-sm">Bank Name</label>
           <select
             className="border rounded px-2 py-1 w-full"
             value={bankName}
-            onChange={e => setBankName(e.target.value)}
+            onChange={e => handleBankSelection(e.target.value)}
             disabled={loading}
           >
             <option value="">Select Bank</option>
-            <option value="Maybank">Maybank (Malayan Banking Berhad)</option>
-            <option value="CIMB Bank">CIMB Bank</option>
-            <option value="Public Bank">Public Bank Berhad</option>
-            <option value="RHB Bank">RHB Bank</option>
-            <option value="Hong Leong Bank">Hong Leong Bank</option>
-            <option value="AmBank">AmBank (AMMB Holdings Berhad)</option>
-            <option value="UOB Malaysia">UOB Malaysia</option>
-            <option value="OCBC Bank Malaysia">OCBC Bank Malaysia</option>
-            <option value="Standard Chartered Malaysia">Standard Chartered Malaysia</option>
-            <option value="HSBC Malaysia">HSBC Malaysia</option>
-            <option value="Affin Bank">Affin Bank</option>
-            <option value="Alliance Bank">Alliance Bank Malaysia</option>
-            <option value="Bank Islam Malaysia">Bank Islam Malaysia</option>
-            <option value="Bank Muamalat Malaysia">Bank Muamalat Malaysia</option>
-            <option value="Bank Rakyat">Bank Rakyat</option>
-            <option value="BSN">Bank Simpanan Nasional (BSN)</option>
-            <option value="Agro Bank">Agro Bank</option>
-            <option value="Bank Kerjasama Rakyat Malaysia">Bank Kerjasama Rakyat Malaysia</option>
-            <option value="SME Bank">SME Bank</option>
-            <option value="Export-Import Bank of Malaysia">Export-Import Bank of Malaysia</option>
+            {Object.keys(bankCodeMap).map(bank => (
+              <option key={bank} value={bank}>{bank}</option>
+            ))}
             <option value="Other">Other</option>
           </select>
         </div>
+
+        {/* Bank Code (auto filled) */}
+        <div className="mb-2">
+          <label className="block text-sm">Bank Code</label>
+          <input
+            className="border rounded px-2 py-1 w-full"
+            value={bankCode}
+            placeholder="Auto-filled based on bank selection"
+            onChange={e => setBankCode(e.target.value)} // allow override
+            disabled={loading}
+          />
+        </div>
+
+        {/* Account Number */}
         <div className="mb-2">
           <label className="block text-sm">Account Number</label>
           <input
@@ -158,7 +187,9 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
             disabled={loading}
           />
         </div>
-        <div className="mb-4">
+
+        {/* Account Holder */}
+        <div className="mb-2">
           <label className="block text-sm">Account Holder Name</label>
           <input
             className="border rounded px-2 py-1 w-full"
@@ -167,17 +198,39 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
             disabled={loading}
           />
         </div>
-        <div className="mb-4 text-sm">
-          <div>
-            <b>Requested:</b> RM{amount.toFixed(2)}
-          </div>
-          <div>
-            <b>Admin Fee (10%):</b> RM{adminFee.toFixed(2)}
-          </div>
-          <div>
-            <b>Amount to Receive:</b> <span className="text-green-700 font-semibold">RM{finalAmount.toFixed(2)}</span>
-          </div>
+
+        {/* Email */}
+        <div className="mb-2">
+          <label className="block text-sm">Recipient Email</label>
+          <input
+            type="email"
+            className="border rounded px-2 py-1 w-full"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            disabled={loading}
+          />
         </div>
+
+        {/* Description */}
+        <div className="mb-4">
+          <label className="block text-sm">Description</label>
+          <textarea
+            className="border rounded px-2 py-1 w-full"
+            rows={2}
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            disabled={loading}
+          />
+        </div>
+
+        {/* Calculation Summary */}
+        <div className="mb-4 text-sm">
+          <div><b>Requested:</b> RM{amount.toFixed(2)}</div>
+          <div><b>Admin Fee (10%):</b> RM{adminFee.toFixed(2)}</div>
+          <div><b>Amount to Receive:</b> <span className="text-green-700 font-semibold">RM{finalAmount.toFixed(2)}</span></div>
+        </div>
+
+        {/* Buttons */}
         <div className="flex gap-2 justify-end">
           <button
             className="bg-gray-200 rounded px-3 py-1"
