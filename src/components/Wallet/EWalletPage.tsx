@@ -340,7 +340,7 @@ console.log("laulalu");
           onClose={() => setShowTopUpModal(false)}
           onSuccess={handleTopUpSuccess}
           currentBalance={founder.walletBalance}
-          loading={loading}
+          userId={founder.id}
         />
       )}
     </div>
