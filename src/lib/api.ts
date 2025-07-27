@@ -1288,9 +1288,9 @@ export const testWhatsAppNotification = async (userId: string, title: string, me
       accountNumber: string,
       accountHolder: string,
       withdrawalId: string,
-      bankCode: string,
       email: string,
-      description: string
+      description: string,
+      bankCode: string
     ) => {
       try {
         const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/initiate-chip-payout`;
@@ -1311,9 +1311,9 @@ export const testWhatsAppNotification = async (userId: string, title: string, me
             accountNumber,
             accountHolder,
             withdrawalId,
-            bankCode,
             email,
-            description
+            description,
+            bankCode
           })
         });
         
