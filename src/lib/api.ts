@@ -1287,12 +1287,15 @@ export const testWhatsAppNotification = async (userId: string, title: string, me
       bankName: string,
       accountNumber: string,
       accountHolder: string,
-      withdrawalId: string
+      withdrawalId: string,
+      bankCode: string,
+      email: string,
+      description: string
     ) => {
       try {
         const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/initiate-chip-payout`;
         
-        console.log('Requesting CHIP withdrawal:', { userId, amount, bankName, accountNumber, accountHolder, withdrawalId });
+        console.log('Requesting CHIP withdrawal:', { userId, amount, bankName, accountNumber, accountHolder, withdrawalId, bankCode, email, description });
         console.log('API URL:', apiUrl);
         
         const response = await fetch(apiUrl, {
@@ -1307,7 +1310,10 @@ export const testWhatsAppNotification = async (userId: string, title: string, me
             bankName,
             accountNumber,
             accountHolder,
-            withdrawalId
+            withdrawalId,
+            bankCode,
+            email,
+            description
           })
         });
         
