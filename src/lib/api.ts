@@ -1339,3 +1339,32 @@ export const testWhatsAppNotification = async (userId: string, title: string, me
         throw new Error(`Withdrawal request failed: ${error.message || 'Unknown error occurred'}`);
       }
     };
+
+export async function createPurchaseChipIn(userId: string, amount: number) {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_EDGE_URL}/create-purchase-chip-in`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          amount,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || "Failed to create purchase");
+    }
+
+    return data; // This contains { success: true, purchase: {...} }
+  } catch (error: any) {
+    console.error("❌ createPurchaseChipIn error:", error.message);
+    throw error;
+  }
+}
