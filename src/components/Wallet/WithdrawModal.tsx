@@ -57,7 +57,11 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ open, onClose, currentTot
         bankName,
         accountNumber,
         accountHolder,
-        withdrawalId
+        withdrawalId,
+        description,
+        bankCode,
+        email,
+        description
       );
 
       console.log('Withdrawal request submitted and processing!');
