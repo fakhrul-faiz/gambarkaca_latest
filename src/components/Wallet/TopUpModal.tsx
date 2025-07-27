@@ -1,43 +1,77 @@
-import React, { useState } from 'react';
-import { X, DollarSign, Lock } from 'lucide-react';
+import React, { useState } from "react";
+import { X, DollarSign, Lock } from "lucide-react";
+import { createPurchaseChipIn } from "../../lib/api";
 
 interface TopUpModalProps {
   onClose: () => void;
   onSuccess: (amount: number) => void;
   currentBalance: number;
-  loading: boolean;
+  userId: string; // ✅ Pass the userId
 }
 
-const TopUpModal: React.FC<TopUpModalProps> = ({ onClose, onSuccess, currentBalance, loading }) => {
-  const [amount, setAmount] = useState('');
+const TopUpModal: React.FC<TopUpModalProps> = ({
+  onClose,
+  onSuccess,
+  currentBalance,
+  userId,
+}) => {
+  const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const quickAmounts = [50, 100, 250, 500, 1000, 2500];
 
   const formatCurrency = (amt: number) =>
-    new Intl.NumberFormat('ms-MY', { style: 'currency', currency: 'MYR' }).format(amt);
+    new Intl.NumberFormat("ms-MY", { style: "currency", currency: "MYR" }).format(amt);
 
   const handleQuickAmount = (quickAmount: number) => {
     setAmount(quickAmount.toString());
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const topUpAmount = parseFloat(amount);
 
     if (!topUpAmount || topUpAmount <= 0) {
-      alert('Please enter a valid amount');
+      alert("Please enter a valid amount");
       return;
     }
     if (topUpAmount < 10) {
-      alert('Minimum top-up amount is RM10');
+      alert("Minimum top-up amount is RM10");
       return;
     }
     if (topUpAmount > 10000) {
-      alert('Maximum top-up amount is RM10,000');
+      alert("Maximum top-up amount is RM10,000");
       return;
     }
 
-    onSuccess(topUpAmount);
+    setLoading(true);
+
+    try {
+      // ✅ Call Edge Function to create CHIP purchase
+      const result = await createPurchaseChipIn(userId, topUpAmount);
+      console.log("✅ CHIP Purchase Response:", result);
+
+      if (result.success) {
+        // ✅ CHIP purchase created successfully
+        onSuccess(topUpAmount);
+
+        // ✅ If CHIP returned checkout_url, redirect to it
+        const checkoutUrl = result.purchase?.checkout_url;
+        if (checkoutUrl) {
+          window.location.href = checkoutUrl;
+        } else {
+          alert("Purchase created successfully!");
+          onClose();
+        }
+      } else {
+        alert("Failed to create purchase: " + (result.message || "Unknown error"));
+      }
+    } catch (err: any) {
+      console.error("❌ createPurchaseChipIn error:", err.message);
+      alert("Failed to create purchase: " + err.message);
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -73,7 +107,10 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ onClose, onSuccess, currentBala
 
           {/* Amount Input */}
           <div>
-            <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="amount"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Top Up Amount *
             </label>
             <div className="relative">
@@ -109,8 +146,8 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ onClose, onSuccess, currentBala
                   onClick={() => handleQuickAmount(quickAmount)}
                   className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
                     amount === quickAmount.toString()
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 hover:border-gray-400 text-gray-700'
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-gray-300 hover:border-gray-400 text-gray-700"
                   }`}
                 >
                   RM{quickAmount}
@@ -122,17 +159,15 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ onClose, onSuccess, currentBala
           {/* Summary */}
           {amount && parseFloat(amount) > 0 && (
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Transaction Summary</h4>
+              <h4 className="text-sm font-medium text-gray-900 mb-2">
+                Transaction Summary
+              </h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Top Up Amount:</span>
                   <span className="font-medium">
                     {formatCurrency(parseFloat(amount))}
                   </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Processing Fee:</span>
-                  <span className="font-medium">RM0.00</span>
                 </div>
                 <div className="border-t border-gray-200 pt-1 mt-2">
                   <div className="flex justify-between">
@@ -143,8 +178,10 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ onClose, onSuccess, currentBala
                   </div>
                 </div>
                 <div className="flex justify-between text-xs text-gray-500 mt-2">
-                  <span>New Balance:</span>
-                  <span>{formatCurrency(currentBalance + parseFloat(amount))}</span>
+                  <span>New Balance (after success):</span>
+                  <span>
+                    {formatCurrency(currentBalance + parseFloat(amount))}
+                  </span>
                 </div>
               </div>
             </div>
@@ -172,7 +209,9 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ onClose, onSuccess, currentBala
               ) : (
                 <>
                   <Lock className="h-4 w-4" />
-                  <span>Top Up {amount ? formatCurrency(parseFloat(amount)) : 'Wallet'}</span>
+                  <span>
+                    Top Up {amount ? formatCurrency(parseFloat(amount)) : "Wallet"}
+                  </span>
                 </>
               )}
             </button>
