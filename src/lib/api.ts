@@ -1340,31 +1340,50 @@ export const testWhatsAppNotification = async (userId: string, title: string, me
       }
     };
 
-export async function createPurchaseChipIn(userId: string, amount: number) {
+export const createPurchaseChipIn = async (
+  userId: string,
+  amount: number
+) => {
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_EDGE_URL}/create-purchase-chip-in`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          amount,
-        }),
-      }
-    );
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-purchase-chip-in`;
+
+    console.log('Requesting CHIP purchase:', { userId, amount });
+    console.log('API URL:', apiUrl);
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        userId,
+        amount
+      })
+    });
+
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
 
     const data = await response.json();
+    console.log('Response data:', data);
 
     if (!response.ok) {
-      throw new Error(data.error || data.message || "Failed to create purchase");
+      throw new Error(data.error || data.message || 'Failed to create CHIP purchase');
     }
 
-    return data; // This contains { success: true, purchase: {...} }
+    return data; // Expected { success: true, purchase: { id, checkout_url, ... } }
   } catch (error: any) {
-    console.error("❌ createPurchaseChipIn error:", error.message);
-    throw error;
+    console.error('Error requesting CHIP purchase:', error);
+
+    // More specific error handling
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      throw new Error(
+        'Network error: Unable to connect to purchase service. Please check your internet connection and try again.'
+      );
+    }
+
+    throw new Error(`Purchase request failed: ${error.message || 'Unknown error occurred'}`);
   }
-}
+};
+
