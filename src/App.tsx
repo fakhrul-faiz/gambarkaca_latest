@@ -159,7 +159,7 @@ const AppContent = () => {
       <Navbar />
 
       {/* This is the main flex-1 area that grows and pushes footer down */}
-      <div className="flex flex-1 flex-col md:flex-row max-w-7xl mx-auto">
+      <div className="flex flex-1 flex-col md:flex-row">
         <Sidebar
           currentPage={currentPage}
           onPageChange={setCurrentPage}
