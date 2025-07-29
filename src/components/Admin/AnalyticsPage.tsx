@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
   TrendingUp, Users, DollarSign, Megaphone, Star, Calendar,
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import ExcelJS from 'exceljs';
+import html2canvas from 'html2canvas';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
@@ -21,10 +22,12 @@ function groupByMonth(items, dateField, valueField?) {
 }
 
 const AnalyticsPage: React.FC = () => {
-  const { orders, transactions, campaigns, talents, founders } = useApp();
+  const { orders, transactions, campaigns, talents, founders, earnings } = useApp();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false);
+  const barChartRef = useRef<HTMLDivElement>(null); // Renamed from chartRef
+  const lineChartRef = useRef<HTMLDivElement>(null); // New ref for line chart
 
   // Filter orders by date
   const filteredOrders = orders.filter(order => {
@@ -39,46 +42,154 @@ const AnalyticsPage: React.FC = () => {
     return true;
   });
 
-  // Export Excel
+  // Export Excel with chart image
   const handleExportExcel = async () => {
+    console.log('Export triggered');
     setLoading(true);
+
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Campaign Payment Report');
 
-    worksheet.columns = [
-      { header: 'Campaign Title', key: 'campaign', width: 30 },
-      { header: 'Campaign Owner', key: 'founder', width: 24 },
-      { header: 'Order ID', key: 'order', width: 24 },
-      { header: 'Talent', key: 'talent', width: 24 },
-      { header: 'Status', key: 'status', width: 16 },
-      { header: 'Payout Amount (RM)', key: 'payout', width: 18 },
-      { header: 'Admin Fee (RM)', key: 'adminFee', width: 14 },
-      { header: 'Total Deduction (RM)', key: 'totalDeduct', width: 18 },
-      { header: 'Order Date', key: 'createdAt', width: 20 },
+    // --- Sheet 2: Transactions Report ---
+    const transactionsWorksheet = workbook.addWorksheet('Transactions Report');
+    transactionsWorksheet.columns = [
+      { header: 'ID', key: 'id', width: 30 },
+      { header: 'User ID', key: 'userId', width: 30 },
+      { header: 'Type', key: 'type', width: 15 },
+      { header: 'Amount (RM)', key: 'amount', width: 18 },
+      { header: 'Description', key: 'description', width: 40 },
+      { header: 'Related Job ID', key: 'relatedJobId', width: 24 },
+      { header: 'Created At', key: 'createdAt', width: 20 },
     ];
-
-    filteredOrders.forEach(order => {
-      const campaign = campaigns.find(c => c.id === order.campaignId);
-      const adminFee = order.payout * 0.1;
-      worksheet.addRow({
-        campaign: campaign ? campaign.title : '',
-        founder: campaign?.founderName || '', // Modify as needed to show founder's name
-        order: order.id,
-        talent: order.talentName,
-        status: order.status,
-        payout: Number(order.payout || 0).toFixed(2),
-        adminFee: Number(adminFee).toFixed(2),
-        totalDeduct: Number(order.payout + adminFee).toFixed(2),
-        createdAt: new Date(order.createdAt).toLocaleString(),
+    transactions.forEach(tx => {
+      transactionsWorksheet.addRow({
+        id: tx.id,
+        userId: tx.userId,
+        type: tx.type,
+        amount: Number(tx.amount).toFixed(2),
+        description: tx.description,
+        relatedJobId: tx.relatedJobId || '',
+        createdAt: new Date(tx.createdAt).toLocaleString(),
       });
     });
+    transactionsWorksheet.getRow(1).font = { bold: true };
 
-    worksheet.getRow(1).font = { bold: true };
+    // --- Sheet 3: Campaigns Report ---
+    const campaignsWorksheet = workbook.addWorksheet('Campaigns Report');
+    campaignsWorksheet.columns = [
+      { header: 'ID', key: 'id', width: 30 },
+      { header: 'Founder ID', key: 'founderId', width: 30 },
+      { header: 'Title', key: 'title', width: 30 },
+      { header: 'Product Name', key: 'productName', width: 25 },
+      { header: 'Category', key: 'category', width: 20 },
+      { header: 'Duration', key: 'duration', width: 15 },
+      { header: 'Rate Level', key: 'rateLevel', width: 15 },
+      { header: 'Media Type', key: 'mediaType', width: 15 },
+      { header: 'Price (RM)', key: 'price', width: 18 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Created At', key: 'createdAt', width: 20 },
+    ];
+    campaigns.forEach(c => {
+      campaignsWorksheet.addRow({
+        id: c.id,
+        founderId: c.founderId,
+        title: c.title,
+        productName: c.productName,
+        category: c.category,
+        duration: c.duration,
+        rateLevel: c.rateLevel,
+        mediaType: c.mediaType,
+        price: Number(c.price).toFixed(2),
+        status: c.status,
+        createdAt: new Date(c.createdAt).toLocaleString(),
+      });
+    });
+    campaignsWorksheet.getRow(1).font = { bold: true };
+
+    // --- Sheet 4: Earnings Report ---
+    const earningsWorksheet = workbook.addWorksheet('Earnings Report');
+    earningsWorksheet.columns = [
+      { header: 'ID', key: 'id', width: 30 },
+      { header: 'Talent ID', key: 'talentId', width: 30 },
+      { header: 'Order ID', key: 'orderId', width: 24 },
+      { header: 'Campaign Title', key: 'campaignTitle', width: 30 },
+      { header: 'Amount (RM)', key: 'amount', width: 18 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Earned At', key: 'earnedAt', width: 20 },
+      { header: 'Paid At', key: 'paidAt', width: 20 },
+    ];
+    earnings.forEach(e => {
+      earningsWorksheet.addRow({
+        id: e.id,
+        talentId: e.talentId,
+        orderId: e.orderId,
+        campaignTitle: e.campaignTitle,
+        amount: Number(e.amount).toFixed(2),
+        status: e.status,
+        earnedAt: new Date(e.earnedAt).toLocaleString(),
+        paidAt: e.paidAt ? new Date(e.paidAt).toLocaleString() : '',
+      });
+    });
+    earningsWorksheet.getRow(1).font = { bold: true };
+
+    // --- Sheet 5: Analytics Charts ---
+    const chartsWorksheet = workbook.addWorksheet('Analytics Charts');
+    let currentRow = 1;
+
+    // Capture and add Bar Chart
+    if (barChartRef.current) {
+      console.log("Attempting to capture Bar Chart image...");
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+      const barCanvas = await html2canvas(barChartRef.current, {
+        backgroundColor: "#fff",
+        useCORS: true,
+        allowTaint: true,
+      });
+      const barChartImageBase64 = barCanvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, "");
+      const barChartImageId = workbook.addImage({
+        base64: barChartImageBase64,
+        extension: 'png',
+      });
+      chartsWorksheet.addImage(barChartImageId, {
+        tl: { col: 0, row: currentRow },
+        ext: { width: 800, height: 320 },
+      });
+      currentRow += Math.ceil(320 / 20) + 2; // Estimate rows based on height, plus some padding
+      console.log("Bar Chart image captured and added.");
+    } else {
+      console.error("Bar Chart ref is null. Cannot capture image.");
+    }
+
+    // Capture and add Line Chart
+    if (lineChartRef.current) {
+      console.log("Attempting to capture Line Chart image...");
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+      const lineCanvas = await html2canvas(lineChartRef.current, {
+        backgroundColor: "#fff",
+        useCORS: true,
+        allowTaint: true,
+      });
+      const lineChartImageBase64 = lineCanvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, "");
+      const lineChartImageId = workbook.addImage({
+        base64: lineChartImageBase64,
+        extension: 'png',
+      });
+      chartsWorksheet.addImage(lineChartImageId, {
+        tl: { col: 0, row: currentRow },
+        ext: { width: 800, height: 320 },
+      });
+      console.log("Line Chart image captured and added.");
+    } else {
+      console.error("Line Chart ref is null. Cannot capture image.");
+    }
+
+    console.log("Generating Excel workbook...");
     const buf = await workbook.xlsx.writeBuffer();
+    console.log("Attempting to save Excel file...");
     saveAs(
-    new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
-    `Campaign_Payment_Report_${Date.now()}.xlsx`
-  );
+      new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      `GambarKaca_Analytics_Report_${Date.now()}.xlsx`
+    );
+    console.log("Excel file save initiated.");
     setLoading(false);
   };
 
@@ -141,7 +252,7 @@ const AnalyticsPage: React.FC = () => {
         />
         <button
           onClick={handleExportExcel}
-          disabled={loading || filteredOrders.length === 0}
+          disabled={loading} // Enable as long as not loading, regardless of filteredOrders length
           className="ml-4 bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 text-white px-5 py-2 rounded-full shadow font-semibold hover:from-green-600 hover:to-purple-600 transition-all duration-200 flex items-center gap-2"
         >
           <Calendar className="h-5 w-5" />
@@ -182,10 +293,10 @@ const AnalyticsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Charts */}
+      {/* Bar Chart with ref for export */}
       <div className="bg-white rounded-2xl shadow-sm border p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Revenue & Campaign Activity</h3>
-        <div className="w-full h-96">
+        <div className="w-full h-96" ref={barChartRef}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -201,10 +312,10 @@ const AnalyticsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Line chart */}
+      {/* Line chart with ref for export */}
       <div className="bg-white rounded-2xl shadow-sm border p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Revenue vs Talent Payouts</h3>
-        <div className="w-full h-80">
+        <div className="w-full h-80" ref={lineChartRef}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />

@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { Database } from './database.types';
-import { User, Founder, Talent, Campaign, Order, Transaction, Earning, Message, Notification } from '../types';
+import { User, Founder, Talent, Campaign, Order, Transaction, Earning, Message, Notification, DirectMessage } from '../types';
 
 type Tables = Database['public']['Tables'];
 type ProfileRow = Tables['profiles']['Row'];
@@ -10,6 +10,7 @@ type TransactionRow = Tables['transactions']['Row'];
 type EarningRow = Tables['earnings']['Row'];
 type MessageRow = Tables['messages']['Row'];
 type NotificationRow = Tables['notifications']['Row'];
+type DirectMessageRow = Tables['direct_messages']['Row'];
 
 // Helper function to convert database profile to app user type
 const convertProfileToUser = (profile: ProfileRow): User | Founder | Talent => {
@@ -100,6 +101,196 @@ const convertOrderToApp = (order: OrderRow, campaignTitle: string, talentName: s
   } : undefined,
 });
 
+// Direct Message functions
+export const getDirectMessages = async (userId: string, otherUserId?: string): Promise<DirectMessage[]> => {
+  try {
+    console.log('Fetching direct messages for user:', userId, 'and other user:', otherUserId);
+    
+    let query = supabase
+      .from('direct_messages')
+      .select(`
+        *,
+        sender:sender_id(id, name),
+        receiver:receiver_id(id, name)
+      `)
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order('created_at', { ascending: true });
+    
+    if (otherUserId) {
+      query = query.or(`and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching direct messages:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.log('No direct messages found');
+      return [];
+    }
+
+    const convertedMessages = data.map(message => ({
+      id: message.id,
+      senderId: message.sender_id,
+      receiverId: message.receiver_id,
+      senderName: message.sender ? (message.sender as any).name : undefined,
+      receiverName: message.receiver ? (message.receiver as any).name : undefined,
+      content: message.content,
+      isRead: message.is_read || false,
+      createdAt: new Date(message.created_at || ''),
+    })) as DirectMessage[];
+
+    return convertedMessages;
+  } catch (error) {
+    console.error('getDirectMessages error:', error);
+    throw error;
+  }
+};
+
+export const createDirectMessage = async (senderId: string, receiverId: string, content: string): Promise<DirectMessage> => {
+  try {
+    console.log('Creating direct message:', { senderId, receiverId, content });
+    
+    const { data, error } = await supabase
+      .from('direct_messages')
+      .insert({
+        sender_id: senderId,
+        receiver_id: receiverId,
+        content,
+        is_read: false,
+      })
+      .select(`
+        *,
+        sender:sender_id(id, name),
+        receiver:receiver_id(id, name)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error creating direct message:', error);
+      throw error;
+    }
+
+    return {
+      id: data.id,
+      senderId: data.sender_id,
+      receiverId: data.receiver_id,
+      senderName: data.sender ? (data.sender as any).name : undefined,
+      receiverName: data.receiver ? (data.receiver as any).name : undefined,
+      content: data.content,
+      isRead: data.is_read || false,
+      createdAt: new Date(data.created_at || ''),
+    } as DirectMessage;
+  } catch (error) {
+    console.error('createDirectMessage error:', error);
+    throw error;
+  }
+};
+
+export const markDirectMessageAsRead = async (messageId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('direct_messages')
+      .update({ is_read: true })
+      .eq('id', messageId);
+
+    if (error) {
+      console.error('Error marking direct message as read:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('markDirectMessageAsRead error:', error);
+    throw error;
+  }
+};
+
+export const markAllDirectMessagesAsRead = async (senderId: string, receiverId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('direct_messages')
+      .update({ is_read: true })
+      .eq('sender_id', senderId)
+      .eq('receiver_id', receiverId)
+      .eq('is_read', false);
+
+    if (error) {
+      console.error('Error marking all direct messages as read:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('markAllDirectMessagesAsRead error:', error);
+    throw error;
+  }
+};
+
+export const subscribeToDirectMessages = (userId: string, callback: (message: DirectMessage) => void) => {
+  return supabase
+    .channel(`direct-messages:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'direct_messages',
+        filter: `receiver_id=eq.${userId}`,
+      },
+      async (payload) => {
+        // Get sender name
+        const { data: sender } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', payload.new.sender_id)
+          .single();
+
+        // Get receiver name
+        const { data: receiver } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', payload.new.receiver_id)
+          .single();
+
+        const message = {
+          id: payload.new.id,
+          senderId: payload.new.sender_id,
+          receiverId: payload.new.receiver_id,
+          senderName: sender?.name,
+          receiverName: receiver?.name,
+          content: payload.new.content,
+          isRead: payload.new.is_read || false,
+          createdAt: new Date(payload.new.created_at),
+        } as DirectMessage;
+        callback(message);
+      }
+    )
+    .subscribe();
+};
+
+// Get admin users
+export const getAdminUsers = async (): Promise<User[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'admin');
+
+    if (error) {
+      console.error('Error fetching admin users:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data.map(profile => convertProfileToUser(profile));
+  } catch (error) {
+    console.error('getAdminUsers error:', error);
+    throw error;
+  }
+};
 
 // Authentication functions
 export const signUp = async (email: string, password: string, userData: any) => {
@@ -207,10 +398,6 @@ export const signIn = async (email: string, password: string) => {
       throw new Error('Your account has been suspended. Please contact support.');
     }
 
-    if (profile.status === 'pending' && profile.role === 'talent') {
-      throw new Error('Your account is pending approval. Please wait for admin approval before signing in.');
-    }
-
     const convertedProfile = convertProfileToUser(profile);
 
     return {
@@ -233,7 +420,13 @@ export const signOut = async () => {
 
 export const getCurrentUser = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+    
+    // Handle refresh token errors by clearing the session
+    if (getUserError && getUserError.message && getUserError.message.includes('refresh_token_not_found')) {
+      await supabase.auth.signOut();
+      return null;
+    }
     
     if (!user) return null;
 
@@ -253,6 +446,11 @@ export const getCurrentUser = async () => {
     return convertProfileToUser(profile);
   } catch (error) {
     console.error('Get current user error:', error);
+    // Also handle refresh token errors in the catch block
+    if (error && typeof error === 'object' && 'message' in error && 
+        typeof error.message === 'string' && error.message.includes('refresh_token_not_found')) {
+      await supabase.auth.signOut();
+    }
     return null;
   }
 };
@@ -643,7 +841,7 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
   const { data, error } = await supabase
     .from('transactions') 
     .insert([{
-      user_id: transactionData.userId, 
+      user_id: transactionData.user_id || transactionData.userId, 
       type: transactionData.type, 
       amount: transactionData.amount,
       description: transactionData.description, 
@@ -651,7 +849,7 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
     }])
     .select();
 
-
+console.log("masuk sini", transactionData);
 
   if (error) throw error;
 
@@ -668,6 +866,7 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
     } as Transaction;
   }
 
+  console.log("masuk sini", transactionData);
   return transactionData;
 };
 
@@ -1039,13 +1238,152 @@ export async function deleteReviewMedia(orderId: string, mediaUrl: string): Prom
   }
 };
 
-// Fetch withdrawals for a user
-export const getWithdrawals = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('withdrawals')
-    .select('*')
-    .eq('user_id', userId)
-    .order('requested_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
+// Test WhatsApp notification function (for development/testing)
+export const testWhatsAppNotification = async (userId: string, title: string, message: string) => {
+  try {
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-whatsapp-notification`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        title: title,
+        message: message,
+        type: 'test'
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to send WhatsApp notification');
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Error sending test WhatsApp notification:', error);
+    throw new Error(`WhatsApp notification failed: ${error.message || 'Unknown error occurred'}`);
+  }
 };
+
+    // Fetch withdrawals for a user
+    export const getWithdrawals = async (userId: string) => {
+      const { data, error } = await supabase
+        .from('withdrawals')
+        .select('id, user_id, amount, admin_fee, bank_name, account_number, account_holder, status, requested_at, chip_payout_id, chip_status, chip_error_message')
+        .eq('user_id', userId)
+        .order('requested_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    };
+    
+    export const requestChipWithdrawal = async (
+      userId: string,
+      amount: number,
+      bankName: string,
+      accountNumber: string,
+      accountHolder: string,
+      withdrawalId: string,
+      email: string,
+      description: string,
+      bankCode: string
+    ) => {
+      try {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/initiate-chip-payout`;
+        
+        console.log('Requesting CHIP withdrawal:', { userId, amount, bankName, accountNumber, accountHolder, withdrawalId, bankCode, email, description });
+        console.log('API URL:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            userId,
+            amount,
+            bankName,
+            accountNumber,
+            accountHolder,
+            withdrawalId,
+            email,
+            description,
+            bankCode
+          })
+        });
+        
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (!response.ok) {
+          throw new Error(data.error || data.message || 'Failed to process withdrawal request');
+        }
+        
+        return data;
+      } catch (error: any) {
+        console.error('Error requesting CHIP withdrawal:', error);
+        
+        // Provide more specific error messages
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+          throw new Error('Network error: Unable to connect to withdrawal service. Please check your internet connection and try again.');
+        }
+        
+        throw new Error(`Withdrawal request failed: ${error.message || 'Unknown error occurred'}`);
+      }
+    };
+
+export const createPurchaseChipIn = async (
+  userId: string,
+  amount: number
+) => {
+  try {
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-purchase-chip-in`;
+
+    console.log('Requesting CHIP purchase:', { userId, amount });
+    console.log('API URL:', apiUrl);
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        userId,
+        amount
+      })
+    });
+
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
+
+    const data = await response.json();
+    console.log('Response data:', data);
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || 'Failed to create CHIP purchase');
+    }
+
+    return data; // Expected { success: true, purchase: { id, checkout_url, ... } }
+  } catch (error: any) {
+    console.error('Error requesting CHIP purchase:', error);
+
+    // More specific error handling
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      throw new Error(
+        'Network error: Unable to connect to purchase service. Please check your internet connection and try again.'
+      );
+    }
+
+    throw new Error(`Purchase request failed: ${error.message || 'Unknown error occurred'}`);
+  }
+};
+

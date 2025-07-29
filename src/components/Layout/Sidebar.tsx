@@ -2,11 +2,11 @@ import React from 'react';
 import { 
   Home, 
   Users, 
-  Star, 
+  Star,
+  MessageCircle,
   Megaphone, 
   Wallet, 
   FileText, 
-  MessageCircle,
   Package,
   BarChart3,
   Settings,
@@ -33,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, className 
           { id: 'talents', label: 'Talents', icon: Star },
           { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
           { id: 'payments', label: 'Payments', icon: CreditCard },
+          { id: 'messages', label: 'Messages', icon: MessageCircle },
           { id: 'analytics', label: 'Analytics', icon: BarChart3 },
         ];
       case 'founder':
@@ -49,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange, className 
           { id: 'marketplace', label: 'Marketplace', icon: Megaphone },
           { id: 'jobs', label: 'My Jobs', icon: Package },
           { id: 'earnings', label: 'Earnings', icon: Wallet },
-          { id: 'profile', label: 'Profile', icon: Settings },
+          // { id: 'profile', label: 'Profile', icon: Settings },
           { id: 'withdrawals', label: 'Withdrawals', icon: DollarSign },
         ];
       default:

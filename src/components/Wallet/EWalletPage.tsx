@@ -56,6 +56,12 @@ const EWalletPage: React.FC = () => {
   };
 
   const handleTopUpSuccess = async (amount, relatedJobId) => {
+  console.log("founder id", founder.id);
+     if (!founder || !founder.id) {
+    alert("Founder information not available. Please refresh the page and try again.");
+    return;
+  }
+    
     if (loading) return;
     setLoading(true);
 
@@ -68,7 +74,7 @@ const EWalletPage: React.FC = () => {
         description: `Wallet Top Up - Credit Card`,
       };
 
-      console.log("lalu sini");
+      console.log("lalu sini", newTransaction);
 
       await createTransaction(newTransaction);
       await refreshData();
@@ -82,7 +88,7 @@ console.log("laulalu");
 
       setShowTopUpModal(false);
     } catch (error) {
-      alert('Top-up failed. Please try again.');
+      console.log('Top-up failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -334,7 +340,7 @@ console.log("laulalu");
           onClose={() => setShowTopUpModal(false)}
           onSuccess={handleTopUpSuccess}
           currentBalance={founder.walletBalance}
-          loading={loading}
+          userId={founder.id}
         />
       )}
     </div>

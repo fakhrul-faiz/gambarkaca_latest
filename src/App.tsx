@@ -23,9 +23,13 @@ import AnalyticsPage from './components/Admin/AnalyticsPage';
 import FounderProfileModal from './components/Profile/FounderProfileModal';
 import TalentProfileModal from './components/Profile/TalentProfileModal';
 import AdminProfileModal from './components/Profile/AdminProfileModal';
+import MessagesPage from './components/Admin/MessagesPage';
+import MessageFab from './components/Common/MessageFab';
 import WithdrawalsPage from './components/Wallet/WithdrawalsPage';
+import Footer from './components/Layout/Footer';
 
-const AppContent: React.FC = () => {
+// Move AppContent outside to be a proper React component
+const AppContent = () => {
   const { user, loading } = useAuth();
   const [showRegister, setShowRegister] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -89,6 +93,11 @@ const AppContent: React.FC = () => {
         // Redirect non-admins to dashboard
         setCurrentPage('dashboard');
         return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
+      case 'messages':
+        if (user.role === 'admin') return <MessagesPage />;
+        // Redirect non-admins to dashboard
+        setCurrentPage('dashboard');
+        return user.role === 'founder' ? <FounderDashboard /> : <TalentDashboard />;
       case 'marketplace':
         // Only allow talents to access marketplace
         if (user.role === 'talent') {
@@ -146,27 +155,36 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <Navbar />
-      <div className="flex flex-col md:flex-row">
-        <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} className="w-full md:w-64" />
+
+      {/* This is the main flex-1 area that grows and pushes footer down */}
+      <div className="max-w-7xl mx-auto flex flex-1 flex-col md:flex-row">
+        <Sidebar
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          className="w-full md:w-64"
+        />
         <main className="flex-1 p-4 md:p-6">
           {renderCurrentPage()}
         </main>
       </div>
+      
+      {/* Message FAB for talents */}
+      {user.role === 'talent' && <MessageFab />}
 
       {/* Profile Modals */}
       {showProfileModal && user.role === 'founder' && (
         <FounderProfileModal onClose={() => setShowProfileModal(false)} />
       )}
-      
       {showProfileModal && user.role === 'talent' && (
         <TalentProfileModal onClose={() => setShowProfileModal(false)} />
       )}
-
       {showProfileModal && user.role === 'admin' && (
         <AdminProfileModal onClose={() => setShowProfileModal(false)} />
       )}
+
+      <Footer />
     </div>
   );
 };

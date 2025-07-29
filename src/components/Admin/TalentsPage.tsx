@@ -339,8 +339,8 @@ const TalentsPage: React.FC = () => {
                         {talent.rateLevel} Star
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 line-clamp-2">
                         {talent.skills.slice(0, 2).join(', ')}
                         {talent.skills.length > 2 && ` +${talent.skills.length - 2}`}
                       </div>
@@ -401,9 +401,7 @@ const TalentsPage: React.FC = () => {
                           </button>
                         )}
                         
-                        <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors">
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
+
                       </div>
                     </td>
                   </tr>

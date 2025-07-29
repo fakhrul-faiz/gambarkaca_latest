@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, User, Mail, Star, Save, Camera, Instagram, Youtube, Plus, Upload, Video, Trash2 } from 'lucide-react';
+import { X, User, Mail, Star, Save, Camera, Instagram, Youtube, Music, Plus, Upload, Video, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Talent } from '../../types';
@@ -26,6 +26,7 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({ onClose }) => {
     socialMedia: {
       instagram: talent.socialMedia?.instagram || '',
       youtube: talent.socialMedia?.youtube || '',
+      tiktok: talent.socialMedia?.tiktok || ''
     },
   });
   const [newSkill, setNewSkill] = useState('');
@@ -90,7 +91,7 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({ onClose }) => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) throw new Error('User not authenticated');
 
-      const uploadedItems = [];
+      const uploadedItems: { url: string; type: 'image' | 'video' }[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -427,6 +428,26 @@ const TalentProfileModal: React.FC<TalentProfileModalProps> = ({ onClose }) => {
                       onChange={handleInputChange}
                       className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="@username"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="socialMedia.tiktok" className="block text-sm font-medium text-gray-700 mb-2">
+                    Tiktok
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Music className="h-5 w-5 text-black" />
+                    </div>
+                    <input
+                      type="text"
+                      id="socialMedia.tiktok"
+                      name="socialMedia.tiktok"
+                      value={formData.socialMedia.tiktok}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="www.tiktok.com/@angular"
                     />
                   </div>
                 </div>

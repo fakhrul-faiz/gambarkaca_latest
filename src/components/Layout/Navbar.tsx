@@ -39,16 +39,14 @@ const Navbar: React.FC = () => {
   const talentUser = user as Talent;
 
   // Calculate talent's total earnings
-  const talentTotalEarnings = isTalent 
-    ? earnings.filter(e => e.talentId === user.id && e.status === 'paid').reduce((sum, e) => sum + e.amount, 0)
-    : 0;
+  const talentTotalEarnings = isTalent ? talentUser.totalEarnings : 0;
     
   // Count unread notifications
   const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <nav className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 shadow-md border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <div className="px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="flex justify-between items-center h-14 md:h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">

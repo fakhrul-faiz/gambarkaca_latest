@@ -317,10 +317,7 @@ const getFounderTotalSpent = (founderId: string) => {
                               Approve
                             </button>
                           )}
-                          
-                          <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors">
-                            <MoreVertical className="h-4 w-4" />
-                          </button>
+      
                         </div>
                       </td>
                     </tr>

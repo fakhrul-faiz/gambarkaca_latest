@@ -26,15 +26,17 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const [sendingMessage, setSendingMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // Focus input after send
+  useEffect(() => {
+    if (!sendingMessage && inputRef.current) inputRef.current.focus();
+  }, [sendingMessage]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,27 +64,29 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && user) {
       const message: Message = {
         id: Date.now().toString(),
         jobId,
-        senderId: user!.id,
+        senderId: user.id,
         content: `📎 Shared a file: ${file.name}`,
         timestamp: new Date(),
         read: false,
       };
       setMessages(prev => [...prev, message]);
+      // TODO: Upload and store the file, update message.content with URL
     }
   };
 
-  const formatTime = (date: Date) =>
+  const formatTime = (date: Date | string) =>
     new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     const today = new Date();
     const messageDate = new Date(date);
     if (messageDate.toDateString() === today.toDateString()) return 'Today';
-    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
     if (messageDate.toDateString() === yesterday.toDateString()) return 'Yesterday';
     return messageDate.toLocaleDateString();
   };
@@ -103,7 +107,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-3 md:p-4 bg-gray-50">
         {messages.length === 0 ? (
           <div className="text-center py-6 md:py-8">
             <MessageCircle className="h-10 w-10 md:h-12 md:w-12 mx-auto text-gray-300 mb-2 md:mb-3" />
@@ -114,35 +118,37 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         ) : (
           <>
-            {messages.map((message, index) => {
-              const isCurrentUser = message.senderId === user?.id;
-              const showDate = index === 0 ||
-                formatDate(new Date(message.timestamp)) !== formatDate(new Date(messages[index - 1].timestamp));
+            <div className="space-y-3 md:space-y-4">
+              {messages.map((message, index) => {
+                const isCurrentUser = message.senderId === user?.id;
+                const showDate = index === 0 ||
+                  formatDate(message.timestamp) !== formatDate(messages[index - 1].timestamp);
 
-              return (
-                <div key={message.id}>
-                  {showDate && (
-                    <div className="text-center py-2">
-                      <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">
-                        {formatDate(new Date(message.timestamp))}
-                      </span>
-                    </div>
-                  )}
-                  <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      isCurrentUser
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-gray-900 border border-gray-200'
-                    }`}>
-                      <p className="text-sm">{message.content}</p>
-                    <p className="text-xs md:text-sm">{message.content}</p>
-                    <p className={`text-xs mt-1 text-opacity-75 ${isCurrentUser ? 'text-blue-100' : 'text-gray-500'}`}>
-                      </p>
+                return (
+                  <div key={message.id} className="mb-3">
+                    {showDate && (
+                      <div className="text-center py-2">
+                        <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">
+                          {formatDate(message.timestamp)}
+                        </span>
+                      </div>
+                    )}
+                    <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        isCurrentUser
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-900 border border-gray-200'
+                      }`}>
+                        <p className="text-sm break-words">{message.content}</p>
+                        <p className={`text-xs mt-1 text-opacity-75 ${isCurrentUser ? 'text-blue-100' : 'text-gray-500'}`}>
+                          {formatTime(message.timestamp)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
             <div ref={messagesEndRef} />
           </>
         )}
@@ -154,6 +160,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           <div className="flex space-x-2">
             <div className="flex-1 relative">
               <input
+                ref={inputRef}
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
