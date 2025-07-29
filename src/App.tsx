@@ -155,7 +155,7 @@ const AppContent = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50 overflow-x-auto">
       <Navbar />
 
       {/* This is the main flex-1 area that grows and pushes footer down */}
