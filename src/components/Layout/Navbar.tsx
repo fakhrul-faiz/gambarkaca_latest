@@ -46,7 +46,7 @@ const Navbar: React.FC = () => {
 
   return (
     <nav className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 shadow-md border-b border-gray-200">
-      <div className="px-3 sm:px-6 lg:px-8">
+      <div className="px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="flex justify-between items-center h-14 md:h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
